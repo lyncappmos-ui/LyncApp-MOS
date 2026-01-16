@@ -1,0 +1,5 @@
+{
+  "name": "LyncApp MOS Core",
+  "description": "A production-grade Mobility Operating System (MOS) for Matatu SACCOs, featuring trip management, multi-branch revenue tracking, trust scoring, SMS ticketing, and Web3 operational anchoring.",
+  "requestFramePermissions": []
+}

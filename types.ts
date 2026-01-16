@@ -1,0 +1,118 @@
+
+export enum TripStatus {
+  SCHEDULED = 'SCHEDULED',
+  READY = 'READY',
+  ACTIVE = 'ACTIVE',
+  DELAYED = 'DELAYED',
+  PAUSED = 'PAUSED',
+  COMPLETED = 'COMPLETED',
+  CANCELLED = 'CANCELLED'
+}
+
+export enum SmsStatus {
+  PENDING = 'PENDING',
+  SENT = 'SENT',
+  FAILED = 'FAILED',
+  DELIVERED = 'DELIVERED'
+}
+
+export interface SACCO {
+  id: string;
+  name: string;
+  code: string;
+}
+
+export interface Branch {
+  id: string;
+  saccoId: string;
+  name: string;
+  location: string;
+}
+
+export interface Vehicle {
+  id: string;
+  plate: string;
+  saccoId: string;
+  branchId: string;
+  capacity: number;
+  type: string;
+  lastLocation?: string;
+}
+
+export interface CrewMember {
+  id: string;
+  name: string;
+  role: 'DRIVER' | 'CONDUCTOR';
+  phone: string;
+  trustScore: number;
+  incentiveBalance: number;
+}
+
+export interface Route {
+  id: string;
+  name: string;
+  code: string;
+  origin: string;
+  destination: string;
+  baseFare: number;
+  segments: string[];
+}
+
+export interface Trip {
+  id: string;
+  routeId: string;
+  vehicleId: string;
+  driverId: string;
+  conductorId: string;
+  branchId: string;
+  status: TripStatus;
+  scheduledTime: string;
+  actualStartTime?: string;
+  actualEndTime?: string;
+  totalRevenue: number;
+  ticketCount: number;
+}
+
+export interface Ticket {
+  id: string; 
+  tripId: string;
+  passengerPhone: string;
+  amount: number;
+  timestamp: string;
+  synced: boolean;
+}
+
+export interface SmsLog {
+  id: string;
+  phoneNumber: string;
+  message: string;
+  status: SmsStatus;
+  retryCount: number;
+  timestamp: string;
+}
+
+export interface DailyAnchor {
+  id: string;
+  date: string;
+  saccoId: string;
+  revenueHash: string;
+  txId?: string;
+  verified: boolean;
+  operationCount: number;
+}
+
+export interface IncentiveTransaction {
+  id: string;
+  operatorId: string;
+  amount: number;
+  reason: string;
+  timestamp: string;
+}
+
+export interface VerifiableCredential {
+  issuer: string;
+  subject: string;
+  claims: Record<string, any>;
+  signature: string;
+  proofType: string;
+}
