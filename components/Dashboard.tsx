@@ -1,15 +1,19 @@
 
 import React, { useState } from 'react';
-// Added MapPin to the lucide-react imports
-import { Plus, History, Calendar, Filter, ArrowUpRight, TrendingUp, ShieldCheck, Cpu, MapPin } from 'lucide-react';
+import { Plus, History, Calendar, Filter, ArrowUpRight, TrendingUp, ShieldCheck, Cpu, MapPin, Sparkles, Send, MessageCircle } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { MOCK_DB } from '../services/db';
 import { TripStatus } from '../types';
 import { MOSService } from '../services/mosService';
+import { GoogleGenAI } from "@google/genai";
 
 const Dashboard: React.FC = () => {
   const [trips, setTrips] = useState(MOCK_DB.trips);
   const [anchoring, setAnchoring] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiQuery, setAiQuery] = useState('');
+  const [aiResponse, setAiResponse] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
 
   const stats = [
     { label: 'Active', count: trips.filter(t => t.status === TripStatus.ACTIVE).length, color: 'bg-green-100 text-green-700', icon: '🟢' },
@@ -42,8 +46,37 @@ const Dashboard: React.FC = () => {
     }, 2000);
   };
 
+  const handleAskAi = async () => {
+    if (!aiQuery) return;
+    setAiLoading(true);
+    setAiResponse(null);
+    try {
+      const ai = new GoogleGenAI({ apiKey: (process.env as any).API_KEY });
+      const prompt = `
+        You are an Operational Assistant for LyncApp MOS (Mobility Operating System).
+        Current Sacco State:
+        - Active Trips: ${trips.filter(t => t.status === TripStatus.ACTIVE).length}
+        - Total Crew: ${MOCK_DB.crews.length}
+        - Daily Revenue: KES ${trips.reduce((a, b) => a + b.totalRevenue, 0)}
+        - Top Crew Member: ${MOCK_DB.crews.sort((a, b) => b.trustScore - a.trustScore)[0].name} (Score: ${MOCK_DB.crews.sort((a, b) => b.trustScore - a.trustScore)[0].trustScore}%)
+        
+        Question: ${aiQuery}
+        Answer concisely as a professional transport manager.
+      `;
+      const result = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: prompt,
+      });
+      setAiResponse(result.text);
+    } catch (err) {
+      setAiResponse("I'm having trouble accessing my core brain right now. Please check operational logs.");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-8 animate-in fade-in duration-500 relative">
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -66,15 +99,6 @@ const Dashboard: React.FC = () => {
             <span>Add New Trip</span>
           </button>
         </div>
-      </div>
-
-      {/* Tabs / Filter Row */}
-      <div className="flex items-center space-x-8 border-b border-slate-200">
-        {['Trip Management', 'Maintenance', 'Scheduled', 'Fleet', 'Historical'].map((tab, idx) => (
-          <button key={tab} className={`pb-4 px-2 text-sm font-semibold transition-all ${idx === 0 ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500 hover:text-slate-800'}`}>
-            {tab}
-          </button>
-        ))}
       </div>
 
       {/* Stats Grid */}
@@ -105,17 +129,11 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Trip Management Table */}
         <div className="lg:col-span-2 space-y-4">
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="p-6 border-b border-slate-100 flex items-center justify-between">
               <h2 className="font-bold text-lg text-slate-900">Live Trip Registry</h2>
-              <div className="flex items-center space-x-2">
-                 <button className="p-2 text-slate-400 hover:text-slate-600"><History size={20} /></button>
-                 <button className="p-2 text-slate-400 hover:text-slate-600"><Filter size={20} /></button>
-              </div>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left">
@@ -183,7 +201,6 @@ const Dashboard: React.FC = () => {
                                  Conclude
                                </button>
                              )}
-                             <button className="p-2 text-slate-400 hover:bg-slate-100 rounded-lg"><ArrowUpRight size={16} /></button>
                           </div>
                         </td>
                       </tr>
@@ -192,61 +209,64 @@ const Dashboard: React.FC = () => {
                 </tbody>
               </table>
             </div>
-            <div className="p-4 bg-slate-50/50 border-t border-slate-100 flex justify-center">
-               <button className="text-xs font-bold text-blue-600 hover:underline">View Full Registry</button>
-            </div>
           </div>
         </div>
 
-        {/* Analytics & Trust Sidebar */}
         <div className="space-y-6">
-          {/* Revenue Chart */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-            <h3 className="font-bold text-slate-900 mb-6 flex items-center">
-               <TrendingUp size={18} className="mr-2 text-blue-500" /> Hourly Load Trend
-            </h3>
-            <div className="h-48 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData}>
-                  <defs>
-                    <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
-                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="name" hide />
-                  <Tooltip 
-                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                  />
-                  <Area type="monotone" dataKey="trips" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
+          {/* AI Assistant Card */}
+          <div className="bg-white p-6 rounded-2xl border-2 border-blue-100 shadow-xl overflow-hidden relative group">
+             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+               <Sparkles size={60} className="text-blue-600" />
+             </div>
+             <h3 className="font-black text-slate-900 mb-4 flex items-center">
+               <MessageCircle size={18} className="mr-2 text-blue-600" /> AI Ops Assistant
+             </h3>
+             <p className="text-xs text-slate-500 mb-4 font-medium">Ask for operational optimizations or data summaries.</p>
+             
+             <div className="space-y-4">
+               {aiResponse && (
+                 <div className="p-4 bg-blue-50 rounded-xl text-xs text-blue-900 font-medium leading-relaxed animate-in slide-in-from-bottom-2">
+                   {aiResponse}
+                 </div>
+               )}
+               <div className="flex items-center space-x-2">
+                 <input 
+                   type="text" 
+                   value={aiQuery}
+                   onChange={(e) => setAiQuery(e.target.value)}
+                   onKeyDown={(e) => e.key === 'Enter' && handleAskAi()}
+                   placeholder="e.g. How is Mike performing?" 
+                   className="flex-1 px-4 py-2 bg-slate-100 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500/20"
+                 />
+                 <button 
+                   onClick={handleAskAi}
+                   disabled={aiLoading}
+                   className="p-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all disabled:opacity-50"
+                 >
+                   {aiLoading ? <Cpu size={14} className="animate-spin" /> : <Send size={14} />}
+                 </button>
+               </div>
+             </div>
           </div>
 
-          {/* Trust Scores */}
           <div className="bg-[#1e293b] text-white p-6 rounded-2xl shadow-lg">
             <h3 className="font-bold mb-4 flex items-center justify-between">
-               <span>Top Operator Trust</span>
-               <span className="text-[10px] bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded border border-blue-500/30">Verified Ledger</span>
+               <span>Operator Trust</span>
+               <span className="text-[10px] bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded">Verified</span>
             </h3>
             <div className="space-y-4">
               {MOCK_DB.crews.map(crew => (
                 <div key={crew.id} className="flex flex-col">
                   <div className="flex justify-between items-center mb-1.5">
                     <span className="text-sm font-medium opacity-80">{crew.name}</span>
-                    <span className="text-xs font-bold text-blue-400">{crew.trustScore}% Score</span>
+                    <span className="text-xs font-bold text-blue-400">{crew.trustScore}%</span>
                   </div>
                   <div className="w-full bg-slate-700 h-1.5 rounded-full overflow-hidden">
-                    <div className="bg-blue-500 h-full transition-all duration-1000" style={{ width: `${crew.trustScore}%` }}></div>
+                    <div className="bg-blue-500 h-full transition-all" style={{ width: `${crew.trustScore}%` }}></div>
                   </div>
                 </div>
               ))}
             </div>
-            <button className="w-full mt-6 py-3 bg-slate-700 hover:bg-slate-600 rounded-xl text-xs font-bold tracking-wider transition-colors">
-              VIEW INCENTIVE LEDGER
-            </button>
           </div>
         </div>
       </div>

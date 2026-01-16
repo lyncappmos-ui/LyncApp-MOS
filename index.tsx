@@ -2,6 +2,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import './services/MOSAPI'; // Initialize API globally
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
