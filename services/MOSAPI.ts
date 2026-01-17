@@ -4,15 +4,39 @@ import { MOCK_DB } from './db';
 import { TripStatus } from '../types';
 import { MOSService } from './mosService';
 import { isSupabaseConfigured } from './supabaseClient';
+import { bus, MOSEvents } from './eventBus';
 
 /**
- * LyncApp MOS Public API Contract (Admin Extension)
- * Strict Read/Write gateway for the Admin Dashboard.
+ * LyncApp MOS Public API Contract
+ * The exclusive gateway. Terminals (Spokes) must use this instead of direct DB access.
  */
 export const LyncMOS = {
-  // --- Operational Write API (Intent Based) ---
+  // --- STATE ACCESS (Proxied through Core) ---
+  
+  async getSyncState() {
+    return {
+      isOnline: navigator.onLine,
+      lastSync: new Date().toISOString(),
+      isCloudEnabled: isSupabaseConfigured,
+      node: 'ALPHA-HUB-01'
+    };
+  },
+
+  async getTerminalContext(phone: string) {
+    // Core finds the data in its validated memory/cache
+    const crew = MOCK_DB.crews.find(c => c.phone === phone);
+    if (!crew) throw new Error("UNAUTHORIZED_OPERATOR");
+    
+    const activeTrip = MOCK_DB.trips.find(t => t.conductorId === crew.id && t.status === TripStatus.ACTIVE);
+    const route = activeTrip ? MOCK_DB.routes.find(r => r.id === activeTrip.routeId) : null;
+    const vehicle = activeTrip ? MOCK_DB.vehicles.find(v => v.id === activeTrip.vehicleId) : null;
+
+    return { operator: crew, activeTrip, route, vehicle };
+  },
+
+  // --- COMMANDS (Intent-Based Writes) ---
+
   async dispatch(tripId: string) {
-    // Logic/Validation happens inside MOSCore.dispatchTrip
     return await MOSCore.dispatchTrip(tripId);
   },
 
@@ -22,53 +46,47 @@ export const LyncMOS = {
 
   async complete(tripId: string) {
     return await MOSService.updateTripStatus(tripId, TripStatus.COMPLETED);
-  },
-
-  // --- Administrative Discovery API (Read Only) ---
-  async getSystemStats() {
-    const activeTrips = MOCK_DB.trips.filter(t => t.status === TripStatus.ACTIVE);
-    const totalRevenue = MOCK_DB.trips.reduce((acc, t) => acc + t.totalRevenue, 0);
-    const avgTrust = MOCK_DB.crews.reduce((acc, c) => acc + c.trustScore, 0) / MOCK_DB.crews.length;
-
-    return {
-      activeTrips: activeTrips.length,
-      totalRevenue,
-      avgTrust: Math.round(avgTrust),
-      crewCount: MOCK_DB.crews.length,
-      fleetCount: MOCK_DB.vehicles.length
-    };
-  },
-
-  async listTrips(filter?: TripStatus) {
-    if (filter) return MOCK_DB.trips.filter(t => t.status === filter);
-    return MOCK_DB.trips;
-  },
-
-  async getRegistry() {
-    return {
-      saccos: MOCK_DB.saccos,
-      branches: MOCK_DB.branches,
-      routes: MOCK_DB.routes,
-      vehicles: MOCK_DB.vehicles,
-      crews: MOCK_DB.crews
-    };
-  },
-
-  // --- System Management ---
-  async getCoreStatus() {
-    return {
-      version: '2.5.0-headless',
-      environment: isSupabaseConfigured ? 'PRODUCTION' : 'DEVELOPMENT',
-      persistence: isSupabaseConfigured ? 'SUPABASE_CLOUD' : 'LOCAL_MEMORY',
-      integrityLayer: 'CELO_MAINNET_ACTIVE'
-    };
-  },
-
-  async performClosure(saccoId: string) {
-    return await MOSService.performDailyClosure(saccoId);
   }
 };
 
+/**
+ * PRODUCTION BRIDGE: 
+ * The secure relay for cross-origin or iframed spoke terminals.
+ */
 if (typeof window !== 'undefined') {
   (window as any).LyncMOS = LyncMOS;
+
+  window.addEventListener('message', async (event) => {
+    const { type, payload, requestId } = event.data;
+
+    if (type?.startsWith('MOS_COMMAND:')) {
+      const methodName = type.replace('MOS_COMMAND:', '');
+      try {
+        if (typeof (LyncMOS as any)[methodName] !== 'function') {
+           throw new Error(`METHOD_NOT_SUPPORTED: ${methodName}`);
+        }
+
+        const result = await (LyncMOS as any)[methodName](...(payload || []));
+        
+        event.source?.postMessage({
+          type: `MOS_RESPONSE:${requestId}`,
+          success: true,
+          data: result
+        }, { targetOrigin: "*" });
+      } catch (err: any) {
+        event.source?.postMessage({
+          type: `MOS_RESPONSE:${requestId}`,
+          success: false,
+          error: err.message
+        }, { targetOrigin: "*" });
+      }
+    }
+  });
+
+  // Forward all Hub events to Spokes
+  bus.on('*', (data: any, eventName: string) => {
+    const packet = { type: 'MOS_EVENT', eventName, data };
+    window.parent.postMessage(packet, '*');
+    if (window.opener) window.opener.postMessage(packet, '*');
+  });
 }
