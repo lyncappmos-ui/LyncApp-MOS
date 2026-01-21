@@ -1,15 +1,15 @@
 
 {
   "name": "lyncap-mos-core",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "engines": {
-    "node": "22.x"
+    "node": "24.x"
   },
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "lint": "eslint src/**"
+    "dev": "ts-node src/index.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.43.2",
@@ -17,6 +17,7 @@
   },
   "devDependencies": {
     "typescript": "^5.4.5",
-    "@types/node": "^22.0.0"
+    "@types/node": "^22.0.0",
+    "ts-node": "^10.9.2"
   }
 }
