@@ -42,7 +42,19 @@ const App: React.FC = () => {
       setIsSimulating(true);
       addLog("Starting Platform RPC simulation...", "info");
       simInterval.current = window.setInterval(async () => {
-        // Mocking a Control Tower connection via postMessage
+        const randomTrip = MOCK_DB.trips[Math.floor(Math.random() * MOCK_DB.trips.length)];
+        try {
+          // Operational Edge (No Platform Key required for local device logic)
+          await LyncMOS.ticket(randomTrip.id, "2547" + Math.random().toString().slice(2, 10), 100);
+        } catch (e) {
+          const readyTrip = MOCK_DB.trips.find(t => t.status !== 'ACTIVE');
+          if (readyTrip) {
+            // FIX: Correct argument order for dispatch (platformKey, tripId)
+            await LyncMOS.dispatch('mos_pk_admin_global_7734', readyTrip.id);
+          }
+        }
+
+        // Mocking a Control Tower connection via postMessage (Remote Logic)
         window.postMessage({
           protocol: 'LYNC_RPC_V1',
           method: 'getPlatformMetrics',
