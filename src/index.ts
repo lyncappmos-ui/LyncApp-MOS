@@ -1,12 +1,12 @@
+
 import { IncomingMessage, ServerResponse } from 'http';
-import { LyncMOS } from './services/MOSAPI';
+import { runtime } from './services/coreRuntime';
 
 /**
- * MOS Core Serverless Entry Point
- * Designed for Vercel Node.js Runtime (24.x)
+ * MOS Core Serverless Entry Point (High Integrity)
+ * Targets: Health checks, State introspection, and API routing.
  */
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
-  // CORS Headers for platform interoperability
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Platform-Key');
@@ -20,44 +20,52 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
 
   const url = new URL(req.url || '/', `http://${req.headers.host}`);
 
-  // Health Probe
-  if (url.pathname === '/health') {
+  // 1. GET /core/state - Full machine-readable state dump
+  if (url.pathname === '/core/state') {
+    const health = await runtime.checkDependencies();
     res.writeHead(200);
+    res.end(JSON.stringify(runtime.envelope({
+      uptime: runtime.getUptime(),
+      lastHealthyAt: runtime.getLastHealthyAt(),
+      dependencies: health
+    })));
+    return;
+  }
+
+  // 2. GET /core/health - Simple heartbeat for load balancers
+  if (url.pathname === '/core/health' || url.pathname === '/health') {
+    const state = runtime.getState();
+    const isHealthy = state === 'READY' || state === 'READ_ONLY';
+    res.writeHead(isHealthy ? 200 : 503);
     res.end(JSON.stringify({ 
-      status: "MOS Core healthy", 
-      // Fix: Cast process to any to access the uptime method which may not be recognized by the current TypeScript environment.
-      uptime: (process as any).uptime(), 
+      status: state, 
+      healthy: isHealthy,
       timestamp: new Date().toISOString() 
     }));
     return;
   }
 
-  // Root Status Endpoint
+  // 3. Root Endpoint
   res.writeHead(200);
-  res.end(JSON.stringify({ 
-    status: "MOS Core running", 
+  res.end(JSON.stringify(runtime.envelope({ 
     service: "LyncApp Mobility Operating System",
-    version: "1.0.0-serverless",
-    engine: "Node.js 24",
-    timestamp: new Date().toISOString(),
+    capabilities: ["RPC_V1", "WEB3_ANCHORING", "STATE_ISOLATION"],
     endpoints: {
-      health: "/health",
-      api: "/api/v1 (available via Platform RPC)"
+      health: "/core/health",
+      state: "/core/state",
+      api: "/api/v1 (RPC via Platform Key)"
     }
-  }));
+  })));
 }
 
 /**
- * Local Development Support
- * Allows running with `ts-node src/index.ts`
+ * Local Development
  */
-// Fix: Access Node-specific globals 'require' and 'module' via globalThis with type assertions to resolve compiler errors in environments where Node types are not explicitly available.
 if (typeof (globalThis as any).require !== 'undefined' && (globalThis as any).require.main === (globalThis as any).module) {
-  // Fix: Access require via globalThis to bypass "Cannot find name 'require'" errors.
   const { createServer } = (globalThis as any).require('http');
   const PORT = process.env.PORT || 3000;
   const server = createServer(handler);
   server.listen(PORT, () => {
-    console.log(`[MOS-CORE-DEV] Local instance listening on port ${PORT}`);
+    console.log(`[MOS-CORE-RESILIENT] Node 24 Instance on port ${PORT}`);
   });
 }

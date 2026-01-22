@@ -1,4 +1,30 @@
 
+/**
+ * LyncApp MOS Core - High Integrity Types
+ */
+
+export enum CoreState {
+  BOOTING = 'BOOTING',
+  WARMING = 'WARMING',
+  READY = 'READY',
+  DEGRADED = 'DEGRADED',
+  READ_ONLY = 'READ_ONLY'
+}
+
+export interface CoreError {
+  code: string;
+  message: string;
+}
+
+export interface CoreResponse<T> {
+  coreState: CoreState;
+  data: T | null;
+  error?: CoreError;
+  version: string;
+  timestamp: string;
+}
+
+// Existing operational types...
 export enum TripStatus {
   SCHEDULED = 'SCHEDULED',
   READY = 'READY',
@@ -16,21 +42,12 @@ export enum SmsStatus {
   DELIVERED = 'DELIVERED'
 }
 
-export type ConsumerType = 
-  | 'sacco_admin' 
-  | 'operator_terminal' 
-  | 'platform_control' 
-  | 'platform_growth';
+export type ConsumerType = 'sacco_admin' | 'operator_terminal' | 'platform_control' | 'platform_growth';
 
 export type MOSCapability = 
-  | 'system_health'
-  | 'operational_metrics'
-  | 'trust_metrics'
-  | 'revenue_integrity'
-  | 'audit_logs'
-  | 'growth_metrics'
-  | 'acquisition_metrics'
-  | 'projections';
+  | 'system_health' | 'operational_metrics' | 'trust_metrics' 
+  | 'revenue_integrity' | 'audit_logs' | 'growth_metrics' 
+  | 'acquisition_metrics' | 'projections';
 
 export interface PlatformOperationalMetrics {
   activeTripCount: number;

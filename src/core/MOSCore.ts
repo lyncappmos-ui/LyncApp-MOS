@@ -32,7 +32,8 @@ export class MOSCore {
     trip.actualStartTime = new Date().toISOString();
 
     if (isSupabaseConfigured) {
-      await supabase.from('trips').update({ status: TripStatus.ACTIVE }).eq('id', tripId);
+      const { error } = await supabase.from('trips').update({ status: TripStatus.ACTIVE }).eq('id', tripId);
+      if (error) throw new Error(`DB_SYNC_FAILURE: ${error.message}`);
     }
 
     bus.emit(MOSEvents.TRIP_STARTED, trip);
@@ -41,7 +42,8 @@ export class MOSCore {
 
   static async issueTicket(params: { tripId: string; phone: string; amount: number }): Promise<Ticket> {
     const trip = MOCK_DB.trips.find(t => t.id === params.tripId);
-    if (!trip || trip.status !== TripStatus.ACTIVE) throw new Error("TRIP_NOT_ACTIVE");
+    if (!trip) throw new Error("TRIP_NOT_FOUND");
+    if (trip.status !== TripStatus.ACTIVE) throw new Error("TRIP_NOT_ACTIVE");
 
     const ticket: Ticket = {
       id: `T-${Math.random().toString(36).substring(7).toUpperCase()}`,
@@ -54,6 +56,14 @@ export class MOSCore {
 
     trip.totalRevenue += params.amount;
     trip.ticketCount += 1;
+
+    if (isSupabaseConfigured) {
+      const { error } = await supabase.from('trips').update({ 
+        total_revenue: trip.totalRevenue,
+        ticket_count: trip.ticketCount 
+      }).eq('id', params.tripId);
+      if (error) throw new Error(`DB_SYNC_FAILURE: ${error.message}`);
+    }
 
     bus.emit(MOSEvents.TICKET_ISSUED, ticket);
     return ticket;

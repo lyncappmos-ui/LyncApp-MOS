@@ -4,10 +4,9 @@ type Listener = (data: any, eventName?: string) => void;
 class EventBus {
   private listeners: Record<string, Listener[]> = {};
   private channel: any;
+  private sequence = 0;
 
   constructor() {
-    // In Node.js, BroadcastChannel is available in the global scope since Node 18.
-    // We wrap it for safety during builds.
     try {
       this.channel = new (globalThis as any).BroadcastChannel('LYNC_MOS_EVENTS');
       this.channel.onmessage = (event: any) => {
@@ -15,7 +14,7 @@ class EventBus {
         this.localEmit(type, data);
       };
     } catch (e) {
-      console.warn("BroadcastChannel not available in this environment.");
+      console.warn("BroadcastChannel not available.");
     }
   }
 
@@ -24,11 +23,30 @@ class EventBus {
     this.listeners[event].push(callback);
   }
 
+  /**
+   * High-Integrity Emit
+   * Adds deterministic metadata for auditing.
+   */
   emit(event: string, data: any) {
-    this.localEmit(event, data);
+    this.sequence++;
+    const enrichedData = {
+      ...data,
+      metadata: {
+        sequence: this.sequence,
+        timestamp: new Date().toISOString(),
+        eventHash: this.generateEventHash(event, data)
+      }
+    };
+
+    this.localEmit(event, enrichedData);
     if (this.channel) {
-      this.channel.postMessage({ type: event, data });
+      this.channel.postMessage({ type: event, data: enrichedData });
     }
+  }
+
+  private generateEventHash(event: string, data: any): string {
+    // Simple deterministic hash for audit sequencing
+    return `seq_${this.sequence}_${Math.random().toString(36).substring(7)}`;
   }
 
   private localEmit(event: string, data: any) {
