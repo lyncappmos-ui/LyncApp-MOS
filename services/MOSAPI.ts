@@ -5,6 +5,8 @@ import { TripStatus, ConsumerType, MOSCapability } from '../types';
 import { MetricsService } from './metricsService';
 import { bus, MOSEvents } from './eventBus';
 import { AuthService } from './authService';
+// Added runtime import for safe standardized RPC execution
+import { runtime } from './coreRuntime';
 
 /**
  * LyncApp MOS Production RPC Gateway (V4)
@@ -15,43 +17,61 @@ export const LyncMOS = {
   // --- PLATFORM READ MODELS (Anonymized & Aggregated) ---
 
   async getPlatformMetrics(key: string) {
-    AuthService.authorize(key, 'operational_metrics');
-    return MetricsService.getPlatformOperations();
+    // Wrapped in executeSafe to provide CoreResponse envelope
+    return runtime.executeSafe(async () => {
+      AuthService.authorize(key, 'operational_metrics');
+      return MetricsService.getPlatformOperations();
+    });
   },
 
   async getGrowthData(key: string) {
-    AuthService.authorize(key, 'growth_metrics');
-    return MetricsService.getGrowthMetrics();
+    // Wrapped in executeSafe to provide CoreResponse envelope
+    return runtime.executeSafe(async () => {
+      AuthService.authorize(key, 'growth_metrics');
+      return MetricsService.getGrowthMetrics();
+    });
   },
 
   async getRevenueHealth(key: string) {
-    AuthService.authorize(key, 'revenue_integrity');
-    return MetricsService.getRevenueIntegrity();
+    // Wrapped in executeSafe to provide CoreResponse envelope
+    return runtime.executeSafe(async () => {
+      AuthService.authorize(key, 'revenue_integrity');
+      return MetricsService.getRevenueIntegrity();
+    });
   },
 
   // --- FLEET OPERATIONS ---
 
   async dispatch(key: string, tripId: string) {
-    AuthService.authorize(key, 'operational_metrics'); 
-    return await MOSCore.dispatchTrip(tripId);
+    // Wrapped in executeSafe with isWrite flag
+    return runtime.executeSafe(async () => {
+      AuthService.authorize(key, 'operational_metrics'); 
+      return await MOSCore.dispatchTrip(tripId);
+    }, { isWrite: true });
   },
 
   // --- TERMINAL EDGES (Device Identity Based) ---
 
   async getTerminalContext(phone: string) {
-    const crew = MOCK_DB.crews.find(c => c.phone === phone);
-    if (!crew) throw new Error("E401: UNAUTHORIZED_OPERATOR");
-    
-    const activeTrip = MOCK_DB.trips.find(t => t.conductorId === crew.id && t.status === TripStatus.ACTIVE);
-    const route = activeTrip ? MOCK_DB.routes.find(r => r.id === activeTrip.routeId) : null;
-    const vehicle = activeTrip ? MOCK_DB.vehicles.find(v => v.id === activeTrip.vehicleId) : null;
+    // Wrapped in executeSafe to provide CoreResponse envelope
+    return runtime.executeSafe(async () => {
+      const crew = MOCK_DB.crews.find(c => c.phone === phone);
+      if (!crew) throw new Error("E401: UNAUTHORIZED_OPERATOR");
+      
+      const activeTrip = MOCK_DB.trips.find(t => t.conductorId === crew.id && t.status === TripStatus.ACTIVE);
+      const route = activeTrip ? MOCK_DB.routes.find(r => r.id === activeTrip.routeId) : null;
+      const vehicle = activeTrip ? MOCK_DB.vehicles.find(v => v.id === activeTrip.vehicleId) : null;
 
-    return { operator: crew, activeTrip, route, vehicle };
+      return { operator: crew, activeTrip, route, vehicle };
+    });
   },
 
   async ticket(tripId: string, phone: string, amount: number) {
-    // Validated at domain level in MOSCore
-    return await MOSCore.issueTicket({ tripId, phone, amount });
+    // Wrapped in executeSafe with isWrite flag
+    return runtime.executeSafe(async () => {
+      // Validated at domain level in MOSCore
+      return await MOSCore.issueTicket({ tripId, phone, amount });
+    }, { isWrite: true });
   }
 };
 

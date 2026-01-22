@@ -24,7 +24,6 @@ export interface CoreResponse<T> {
   timestamp: string;
 }
 
-// Existing operational types...
 export enum TripStatus {
   SCHEDULED = 'SCHEDULED',
   READY = 'READY',

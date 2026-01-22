@@ -3,13 +3,9 @@ import { CoreState, CoreResponse, CoreError } from '../types';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 import { bus } from './eventBus';
 
-/**
- * LyncApp MOS Core Runtime
- * Responsibility: State Management, Error Isolation, and Health Orchestration.
- */
 class CoreRuntime {
   private state: CoreState = CoreState.BOOTING;
-  private version = '1.0.0-resilient';
+  private version = '1.0.1-resilient';
   private lastHealthyAt: string = new Date().toISOString();
 
   constructor() {
@@ -36,11 +32,15 @@ class CoreRuntime {
       bus: !!bus
     };
 
-    if (isSupabaseConfigured) {
-      const { error } = await supabase.from('saccos').select('count', { count: 'exact', head: true });
-      health.db = !error;
-    } else {
-      health.db = true; // In mock mode, DB is always "healthy"
+    try {
+      if (isSupabaseConfigured && supabase) {
+        const { error } = await supabase.from('saccos').select('count', { count: 'exact', head: true });
+        health.db = !error;
+      } else {
+        health.db = true; // Local dev mode fallback
+      }
+    } catch (e) {
+      health.db = false;
     }
 
     if (Object.values(health).every(v => v)) {
@@ -53,21 +53,15 @@ class CoreRuntime {
     return health;
   }
 
-  /**
-   * Safe Execution Wrapper
-   * Wraps all business logic to ensure the Core NEVER crashes.
-   */
   public async executeSafe<T>(
     operation: () => Promise<T>,
     options: { isWrite?: boolean } = {}
   ): Promise<CoreResponse<T>> {
-    const timestamp = new Date().toISOString();
-
-    // 1. Guard against writes in READ_ONLY or DEGRADED states
+    // Write Guard
     if (options.isWrite && (this.state === CoreState.READ_ONLY || this.state === CoreState.DEGRADED)) {
       return this.envelope(null, {
-        code: 'CORE_STATE_RESTRICTION',
-        message: `Write operations disabled while core is in ${this.state} state.`
+        code: 'CORE_PROTECTION_FAULT',
+        message: `Writes disabled. System is currently in ${this.state} state.`
       });
     }
 
@@ -75,16 +69,16 @@ class CoreRuntime {
       const result = await operation();
       return this.envelope(result);
     } catch (err: any) {
-      console.error(`[RUNTIME_FAULT] ${err.message}`);
+      console.error(`[MOS_RUNTIME_CRITICAL] ${err.message}`);
       
-      // Auto-degrade if we hit a systemic error
-      if (err.message.includes('DB') || err.message.includes('NETWORK')) {
+      // Automatic Failure Isolation
+      if (err.message.includes('fetch') || err.message.includes('Supabase') || err.message.includes('401')) {
         this.state = CoreState.DEGRADED;
       }
 
       return this.envelope(null, {
-        code: err.code || 'INTERNAL_RUNTIME_ERROR',
-        message: err.message
+        code: err.code || 'RUNTIME_EXCEPTION',
+        message: err.message || 'An unexpected MOS Core error occurred.'
       });
     }
   }
@@ -100,7 +94,11 @@ class CoreRuntime {
   }
 
   public getUptime(): number {
-    return (process as any).uptime();
+    // Cast process to any to access Node.js specific uptime() which might be missing in environment types
+    if (typeof process !== 'undefined' && typeof (process as any).uptime === 'function') {
+      return (process as any).uptime();
+    }
+    return 0; // Fallback for pure browser environments
   }
 
   public getLastHealthyAt(): string {

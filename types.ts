@@ -17,6 +17,30 @@ export enum SmsStatus {
 }
 
 /**
+ * NEW: MOS Core State Definitions
+ */
+export enum CoreState {
+  BOOTING = 'BOOTING',
+  WARMING = 'WARMING',
+  READY = 'READY',
+  DEGRADED = 'DEGRADED',
+  READ_ONLY = 'READ_ONLY'
+}
+
+export interface CoreError {
+  code: string;
+  message: string;
+}
+
+export interface CoreResponse<T> {
+  coreState: CoreState;
+  data: T | null;
+  error?: CoreError;
+  version: string;
+  timestamp: string;
+}
+
+/**
  * NEW: MOS Consumer Classification
  */
 export type ConsumerType = 

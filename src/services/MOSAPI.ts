@@ -1,5 +1,6 @@
 
 import { MOSCore } from '../core/MOSCore';
+import { MOSService } from './mosService';
 import { MOCK_DB } from './db';
 import { TripStatus } from '../types';
 import { MetricsService } from './metricsService';
@@ -8,7 +9,7 @@ import { runtime } from './coreRuntime';
 
 /**
  * LyncApp MOS High-Integrity RPC Gateway
- * All calls are wrapped in Safe Execution logic.
+ * Production Ready Interface for all Platform Consumers.
  */
 export const LyncMOS = {
   async getPlatformMetrics(key: string) {
@@ -42,7 +43,7 @@ export const LyncMOS = {
   async getTerminalContext(phone: string) {
     return runtime.executeSafe(async () => {
       const crew = MOCK_DB.crews.find(c => c.phone === phone);
-      if (!crew) throw new Error("E401: UNAUTHORIZED_OPERATOR");
+      if (!crew) throw new Error("UNAUTHORIZED_OPERATOR");
       
       const activeTrip = MOCK_DB.trips.find(t => t.conductorId === crew.id && t.status === TripStatus.ACTIVE);
       const route = activeTrip ? MOCK_DB.routes.find(r => r.id === activeTrip.routeId) : null;
@@ -54,7 +55,13 @@ export const LyncMOS = {
 
   async ticket(tripId: string, phone: string, amount: number) {
     return runtime.executeSafe(async () => {
-      return await MOSCore.issueTicket({ tripId, phone, amount });
+      return await MOSService.issueTicket(tripId, phone, amount);
+    }, { isWrite: true });
+  },
+
+  async updateTripStatus(tripId: string, status: TripStatus) {
+    return runtime.executeSafe(async () => {
+      return await MOSService.updateTripStatus(tripId, status);
     }, { isWrite: true });
   }
 };
