@@ -7,6 +7,5 @@ export async function GET() {
   const result = await runtime.executeSafe(async () => {
     return MOCK_DB.smsLogs || [];
   }, []);
-
   return NextResponse.json(result);
 }

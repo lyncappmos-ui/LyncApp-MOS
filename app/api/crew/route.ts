@@ -7,7 +7,6 @@ export async function GET() {
   const result = await runtime.executeSafe(async () => {
     return MOCK_DB.crews || [];
   }, []);
-
   return NextResponse.json(result);
 }
 
@@ -15,15 +14,13 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     if (!body || !body.name) {
-      return NextResponse.json({ error: 'Invalid payload: "name" is required.' }, { status: 400 });
+      return NextResponse.json({ error: 'Payload missing "name"' }, { status: 400 });
     }
-
     const result = await runtime.executeSafe(async () => {
       return await runtime.createOperator(body);
     }, null as any, { isWrite: true });
-
     return NextResponse.json(result, { status: 201 });
-  } catch (err: any) {
-    return NextResponse.json({ error: 'Payload processing fault.', message: err.message }, { status: 400 });
+  } catch (err) {
+    return NextResponse.json({ error: 'Invalid JSON payload' }, { status: 400 });
   }
 }

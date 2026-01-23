@@ -13,6 +13,5 @@ export async function GET() {
       nodeVersion: (process as any).version || '24.x'
     }
   });
-
   return NextResponse.json(result);
 }
