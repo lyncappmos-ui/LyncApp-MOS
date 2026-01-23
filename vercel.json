@@ -2,7 +2,7 @@
 {
   "version": 2,
   "functions": {
-    "src/index.ts": {
+    "api/**/*.ts": {
       "runtime": "@vercel/node@3.18.0",
       "memory": 1024,
       "maxDuration": 15
