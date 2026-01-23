@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Terminal, Cpu, Activity, ShieldCheck, Radio, SignalHigh, Globe, Key, RefreshCcw, BookOpen, Layers } from 'lucide-react';
+import { Terminal, Cpu, Activity, ShieldCheck, Radio, SignalHigh, Globe, Key, RefreshCcw, Layers } from 'lucide-react';
 import { bus, MOSEvents } from '@/services/eventBus';
 import { LyncMOS } from '@/services/MOSAPI';
 import { MOCK_DB } from '@/services/db';
@@ -21,7 +21,7 @@ export default function Home() {
   };
 
   useEffect(() => {
-    addLog(`MOS Core Hub Live: Next.js 15 App Router`, "info");
+    addLog(`MOS Kernel V3 Live: Next.js 15 App Router`, "info");
     
     const statusInterval = setInterval(() => {
       setCoreState(runtime.getState());
@@ -65,16 +65,6 @@ export default function Home() {
   const stateColor = coreState === CoreState.READY ? 'text-green-400' : 
                     coreState === CoreState.WARMING ? 'text-yellow-400' : 'text-red-400';
 
-  const endpoints = [
-    { path: '/api/health', method: 'GET', desc: 'System pulse and runtime telemetry' },
-    { path: '/api/branches', method: 'GET', desc: 'Regional branch registry' },
-    { path: '/api/crew', method: 'GET', desc: 'Reputation and trust score registry' },
-    { path: '/api/fleet', method: 'GET', desc: 'Vehicle and asset tracking' },
-    { path: '/api/trips', method: 'GET/POST', desc: 'Operational trip commands' },
-    { path: '/api/sms', method: 'GET', desc: 'Communication network metrics' },
-    { path: '/api/settings', method: 'GET', desc: 'Core SACCO identity settings' },
-  ];
-
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-[#020617] font-sans">
       <header className="bg-slate-900/80 backdrop-blur-md border-b border-slate-800 p-6 flex items-center justify-between z-30">
@@ -82,7 +72,7 @@ export default function Home() {
           <div className="flex items-center space-x-3">
             <Cpu className="text-blue-500" size={28} />
             <div>
-              <h1 className="text-white font-black text-lg tracking-tighter uppercase leading-none">MOS-CORE-HUB</h1>
+              <h1 className="text-white font-black text-lg tracking-tighter uppercase leading-none">MOS-CORE-V3</h1>
               <div className="flex items-center space-x-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">
                 <Radio size={12} className={`${stateColor} animate-pulse`} />
                 <span>STATE: {coreState}</span>
@@ -105,22 +95,6 @@ export default function Home() {
 
       <main className="flex-1 flex overflow-hidden">
         <aside className="w-[360px] bg-slate-900/40 border-r border-slate-800 flex flex-col hidden lg:flex">
-          <div className="p-8 border-b border-slate-800">
-             <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center mb-8">
-                <BookOpen size={16} className="mr-3 text-blue-500" /> System Interface
-             </h3>
-             <div className="space-y-4">
-                {endpoints.map((ep, i) => (
-                  <div key={i} className="group p-5 rounded-2xl border border-slate-800 hover:border-blue-500/30 bg-slate-900/50 transition-all cursor-pointer">
-                    <div className="flex items-center justify-between mb-2">
-                      <code className="text-[11px] text-blue-400 font-bold tracking-tight">{ep.path}</code>
-                      <span className="text-[9px] font-black px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">{ep.method}</span>
-                    </div>
-                    <p className="text-[10px] text-slate-500 leading-relaxed">{ep.desc}</p>
-                  </div>
-                ))}
-             </div>
-          </div>
           <div className="p-8 flex-1 overflow-y-auto custom-scrollbar">
              <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center mb-8">
                 <Globe size={16} className="mr-3 text-indigo-500" /> Live Intercepts
@@ -141,12 +115,6 @@ export default function Home() {
                       </div>
                     </div>
                 ))}
-                {gateConnections.length === 0 && (
-                  <div className="p-12 text-center text-slate-600 italic text-[11px] space-y-4">
-                    <RefreshCcw className="mx-auto text-slate-800 opacity-20" size={32} />
-                    <p>Awaiting operational telemetry...</p>
-                  </div>
-                )}
              </div>
           </div>
         </aside>
@@ -155,12 +123,12 @@ export default function Home() {
           <div className="p-8 flex items-center justify-between border-b border-slate-800/50 bg-slate-900/10 backdrop-blur-xl sticky top-0 z-10">
             <div className="flex items-center space-x-4 text-slate-500">
               <Terminal size={18} className="text-blue-500" />
-              <span className="text-[11px] font-black uppercase tracking-widest text-white">Hub Kernel Stream</span>
+              <span className="text-[11px] font-black uppercase tracking-widest text-white">Kernel Command Stream</span>
             </div>
             <div className="flex items-center space-x-8">
                <div className="flex items-center space-x-2 text-[11px] text-slate-500 font-bold">
                   <Layers size={14} className="text-slate-700" />
-                  <span>V2.7.0-HUB</span>
+                  <span>V3.0.0-PRO</span>
                </div>
             </div>
           </div>
@@ -178,15 +146,6 @@ export default function Home() {
                   </span>
                 </div>
              ))}
-             {logs.length === 0 && (
-               <div className="h-full flex items-center justify-center flex-col space-y-8 opacity-20">
-                  <RefreshCcw className="animate-spin text-blue-500" size={48} />
-                  <div className="text-center">
-                    <span className="uppercase tracking-[0.4em] text-[11px] font-black block">Hub Bootstrapping</span>
-                    <span className="text-[10px] mt-2 block">Verifying kernel integrity...</span>
-                  </div>
-               </div>
-             )}
           </div>
         </section>
       </main>

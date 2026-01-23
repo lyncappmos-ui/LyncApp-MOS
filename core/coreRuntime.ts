@@ -1,18 +1,13 @@
 
-import { CoreState, CoreResponse, CoreError } from '@/types';
+import { CoreState, CoreResponse, CoreError, TripStatus } from '@/types';
 import { supabase, isSupabaseConfigured } from '@/services/supabaseClient';
 import { bus } from '@/services/eventBus';
 import { MOCK_DB } from '@/services/db';
 import { MOSService } from '@/services/mosService';
 
-/**
- * MOS Core Runtime
- * High-Integrity execution with circuit breaking and offline fallbacks.
- * Refactored for Next.js 15 and Node 24 serverless environments.
- */
 class CoreRuntime {
   private state: CoreState = CoreState.BOOTING;
-  private version = '2.9.0-core';
+  private version = '3.0.0-kernel';
   private lastHealthyAt: string = new Date().toISOString();
   
   private failureCount = 0;
@@ -33,7 +28,6 @@ class CoreRuntime {
       this.state = CoreState.READY;
     } catch (e) {
       this.state = CoreState.DEGRADED;
-      console.warn("[MOS_CORE] Runtime initialized in degraded mode.");
     }
   }
 
@@ -52,7 +46,7 @@ class CoreRuntime {
         const { error } = await supabase.from('saccos').select('count', { count: 'exact', head: true });
         health.db = !error;
       } else {
-        health.db = true;
+        health.db = true; 
       }
     } catch (e) {
       health.db = false;
@@ -80,7 +74,7 @@ class CoreRuntime {
     if (this.isCircuitBroken) {
       return this.envelope(fallbackData, {
         code: 'CIRCUIT_OPEN',
-        message: 'Platform in protection mode. Using mock failover.'
+        message: 'System in protection mode. Using mock failover.'
       });
     }
 
@@ -97,17 +91,13 @@ class CoreRuntime {
       this.onSuccess();
       return this.envelope(safeResult);
     } catch (err: any) {
-      console.error(`[MOS_RUNTIME_CRITICAL] ${err.message}`);
       this.reportFailure();
-
       return this.envelope(fallbackData, {
         code: err.code || 'RUNTIME_FAULT',
         message: err.message || 'Operational runtime error.'
       });
     }
   }
-
-  // --- Entity Creation Methods (Business Logic Layer) ---
 
   public async createBranch(data: any) {
     return await MOSService.addBranch({

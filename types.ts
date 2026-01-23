@@ -16,16 +16,12 @@ export enum SmsStatus {
   DELIVERED = 'DELIVERED'
 }
 
-/**
- * NEW: MOS Core State Definitions
- */
 export enum CoreState {
   BOOTING = 'BOOTING',
   WARMING = 'WARMING',
   READY = 'READY',
   DEGRADED = 'DEGRADED',
   READ_ONLY = 'READ_ONLY',
-  // Added CIRCUIT_OPEN to fix missing property error in Dashboard.tsx
   CIRCUIT_OPEN = 'CIRCUIT_OPEN'
 }
 
@@ -42,27 +38,18 @@ export interface CoreResponse<T> {
   timestamp: string;
 }
 
-/**
- * NEW: MOS Consumer Classification
- */
 export type ConsumerType = 
   | 'sacco_admin' 
   | 'operator_terminal' 
   | 'platform_control' 
   | 'platform_growth';
 
-/**
- * NEW: Capability-Based Access Categories
- */
 export type MOSCapability = 
   | 'system_health'
   | 'operational_metrics'
   | 'trust_metrics'
   | 'revenue_integrity' | 'audit_logs' | 'growth_metrics' | 'acquisition_metrics' | 'projections';
 
-/**
- * NEW: Platform-Wide Aggregated Read Models
- */
 export interface PlatformOperationalMetrics {
   activeTripCount: number;
   globalTicketVolume: number;
@@ -83,7 +70,6 @@ export interface RevenueIntegrityReport {
   web3VerificationStatus: 'OPTIMAL' | 'PENDING' | 'CRITICAL';
 }
 
-// Existing Entity Types...
 export interface SACCO { id: string; name: string; code: string; }
 export interface Branch { id: string; saccoId: string; name: string; location: string; }
 export interface Vehicle { id: string; plate: string; saccoId: string; branchId: string; capacity: number; type: string; lastLocation?: string; }
