@@ -13,8 +13,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { action, tripId, key } = body;
+    const { action, tripId, key } = await req.json();
     
     const result = await runtime.executeSafe(async () => {
       if (action === 'dispatch') return await LyncMOS.dispatch(key || 'mos_pk_admin_global_7734', tripId);

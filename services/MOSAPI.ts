@@ -17,7 +17,15 @@ export const fallbackState: {
   route: Route | null;
   vehicle: Vehicle | null;
 } = {
-  operator: { id: 'unknown', name: 'Unknown Operator', role: 'N/A' },
+  // Fixed: Added missing properties (phone, trustScore, incentiveBalance) to satisfy CrewMember interface
+  operator: { 
+    id: 'unknown', 
+    name: 'Unknown Operator', 
+    role: 'N/A',
+    phone: '0',
+    trustScore: 0,
+    incentiveBalance: 0
+  },
   activeTrip: null,
   route: null,
   vehicle: null,

@@ -10,9 +10,10 @@ export async function GET() {
       status: 'ok',
       service: 'MOS_CORE',
       node: (process as any).version || '24.x',
-      uptime: `${Math.floor(runtime.getUptime())}s`
+      uptime: `${Math.floor(runtime.getUptime())}s`,
+      timestamp: Date.now()
     };
-  }, { status: 'degraded', service: 'MOS_CORE', node: 'unknown', uptime: '0s' });
+  }, { status: 'degraded', service: 'MOS_CORE', node: 'unknown', uptime: '0s', timestamp: Date.now() });
 
   return NextResponse.json(result);
 }

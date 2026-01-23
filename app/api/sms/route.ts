@@ -4,14 +4,13 @@ import { runtime } from '@/core/coreRuntime';
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { phone, message } = body;
+    const { phone, message } = await req.json();
 
     const result = await runtime.executeSafe(async () => {
-      // Mock SMS Delivery Logic
-      console.log(`[MOS_SMS_RELAY] Dispatching to ${phone}: ${message}`);
-      return { success: true, ref: `SMS_${Math.random().toString(36).substring(7).toUpperCase()}` };
-    }, { success: false, ref: 'FALLBACK' }, { isWrite: true });
+      // Logic for SMS relay would go here
+      console.log(`[MOS_CORE_SMS] Relay to ${phone}: ${message}`);
+      return { success: true, trackingId: `SMS_${Math.random().toString(36).substring(7).toUpperCase()}` };
+    }, { success: false, trackingId: 'FALLBACK' }, { isWrite: true });
 
     return NextResponse.json(result);
   } catch (err) {
