@@ -1,4 +1,3 @@
-
 import { CoreState, CoreResponse, CoreError } from '@/types';
 import { supabase, isSupabaseConfigured } from '@/services/supabaseClient';
 import { bus } from '@/services/eventBus';
@@ -6,19 +5,21 @@ import { bus } from '@/services/eventBus';
 /**
  * MOS Core Runtime
  * High-Integrity execution with circuit breaking and offline fallbacks.
- * Validated for Node.js 24.x environment.
+ * Refactored for Next.js 15 and Node 24 serverless environments.
  */
 class CoreRuntime {
   private state: CoreState = CoreState.BOOTING;
-  private version = '2.7.0-hub';
+  private version = '2.8.0-core';
   private lastHealthyAt: string = new Date().toISOString();
   
   private failureCount = 0;
   private maxFailures = 3;
   private isCircuitBroken = false;
-  private resetTimeout: any = null;
+  // Fix: Use any instead of NodeJS.Timeout to avoid namespace errors in environments where NodeJS types are not globally available
+  private resetTimeout: any | null = null;
 
   constructor() {
+    // Execution context check: only initialize on server-side entry
     if (typeof window === 'undefined') {
       this.initialize();
     }
@@ -31,7 +32,7 @@ class CoreRuntime {
       this.state = CoreState.READY;
     } catch (e) {
       this.state = CoreState.DEGRADED;
-      console.warn("[MOS_RUNTIME] Cold boot warning: Operating in DEGRADED mode.");
+      console.warn("[MOS_CORE] Runtime initialized in degraded mode.");
     }
   }
 
@@ -50,7 +51,7 @@ class CoreRuntime {
         const { error } = await supabase.from('saccos').select('count', { count: 'exact', head: true });
         health.db = !error;
       } else {
-        health.db = true; 
+        health.db = true; // Local dev mode assumes healthy fallback
       }
     } catch (e) {
       health.db = false;
@@ -69,6 +70,10 @@ class CoreRuntime {
     return health;
   }
 
+  /**
+   * executeSafe: High-integrity execution wrapper for Route Handlers.
+   * Ensures every API call returns a valid envelope and respects the circuit breaker.
+   */
   public async executeSafe<T>(
     operation: () => Promise<T>,
     fallbackData: T,
@@ -77,15 +82,15 @@ class CoreRuntime {
     
     if (this.isCircuitBroken) {
       return this.envelope(fallbackData, {
-        code: 'CIRCUIT_BREAKER_OPEN',
-        message: 'System protection mode active. Returning cached/mock data.'
+        code: 'CIRCUIT_OPEN',
+        message: 'Platform in protection mode. Using mock failover.'
       });
     }
 
     if (options.isWrite && (this.state === CoreState.READ_ONLY || this.state === CoreState.DEGRADED)) {
       return this.envelope(fallbackData, {
-        code: 'CORE_PROTECTION_FAULT',
-        message: `Writes disabled. System state is ${this.state}.`
+        code: 'WRITE_PROTECTION_FAULT',
+        message: `System in ${this.state} state. Writes inhibited.`
       });
     }
 
@@ -95,12 +100,12 @@ class CoreRuntime {
       this.onSuccess();
       return this.envelope(safeResult);
     } catch (err: any) {
-      console.error(`[MOS_RUNTIME_ERROR] ${err.message}`);
+      console.error(`[MOS_RUNTIME_CRITICAL] ${err.message}`);
       this.reportFailure();
 
       return this.envelope(fallbackData, {
-        code: err.code || 'RUNTIME_EXCEPTION',
-        message: err.message || 'Operational execution fault.'
+        code: err.code || 'RUNTIME_FAULT',
+        message: err.message || 'Operational runtime error.'
       });
     }
   }
@@ -137,10 +142,14 @@ class CoreRuntime {
   public resetCircuit() {
     this.isCircuitBroken = false;
     this.failureCount = 0;
+    if (this.resetTimeout) {
+      clearTimeout(this.resetTimeout);
+      this.resetTimeout = null;
+    }
   }
 
   public getUptime(): number {
-    return typeof process !== 'undefined' ? (process as any).uptime?.() || 0 : 0;
+    return typeof process !== 'undefined' && (process as any).uptime ? (process as any).uptime() : 0;
   }
 
   public getLastHealthyAt(): string {

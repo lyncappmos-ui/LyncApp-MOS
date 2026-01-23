@@ -7,7 +7,7 @@ import { TripStatus } from '@/types';
 
 export async function GET() {
   const result = await runtime.executeSafe(async () => {
-    return MOCK_DB.trips;
+    return MOCK_DB.trips || [];
   }, []);
   return NextResponse.json(result);
 }
@@ -20,14 +20,14 @@ export async function POST(request: NextRequest) {
     const result = await runtime.executeSafe(async () => {
       if (action === 'dispatch') return await MOSService.updateTripStatus(tripId, TripStatus.ACTIVE);
       if (action === 'update_status') return await MOSService.updateTripStatus(tripId, status);
-      throw new Error("INVALID_ACTION");
+      throw new Error("UNSUPPORTED_ACTION");
     }, null as any, { isWrite: true });
 
     return NextResponse.json(result);
   } catch (err: any) {
     return NextResponse.json({
       status: 'error',
-      message: err.message
+      message: err.message || 'Payload processing fault.'
     }, { status: 400 });
   }
 }

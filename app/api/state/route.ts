@@ -10,7 +10,7 @@ export async function GET() {
     dependencies: health,
     config: {
       isSupabaseConnected: !!process.env.SUPABASE_URL,
-      nodeVersion: (process as any).version
+      nodeVersion: (process as any).version || '24.x'
     }
   });
 

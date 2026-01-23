@@ -7,7 +7,7 @@ export async function GET() {
   const uptime = runtime.getUptime();
   
   return NextResponse.json({
-    status: 'Operational',
+    status: 'MOS Core Operational',
     coreState: state,
     uptime: `${Math.floor(uptime)}s`,
     timestamp: new Date().toISOString(),
