@@ -11,7 +11,7 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: "LyncApp MOS Core",
-  description: "A production-grade Mobility Operating System for Matatu SACCOs",
+  description: "High-Integrity Mobility Operating System Hub",
 };
 
 export default function RootLayout({

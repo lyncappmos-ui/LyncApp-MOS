@@ -1,20 +1,19 @@
 
 {
   "name": "lyncap-mos-core",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "seed": "ts-node src/data/seed.ts"
+    "lint": "next lint"
   },
   "dependencies": {
     "next": "15.1.0",
     "react": "19.0.0",
     "react-dom": "19.0.0",
-    "lucide-react": "^0.562.0",
+    "lucide-react": "^0.468.0",
     "@supabase/supabase-js": "^2.47.10",
     "@google/genai": "^1.37.0",
     "clsx": "^2.1.1",
@@ -27,7 +26,6 @@
     "@types/react-dom": "^19.0.1",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.16",
-    "autoprefixer": "^10.4.20",
-    "ts-node": "^10.9.2"
+    "autoprefixer": "^10.4.20"
   }
 }

@@ -1,14 +1,16 @@
 
 import { NextResponse } from 'next/server';
-import { runtime } from '@/services/coreRuntime';
+import { runtime } from '@/core/coreRuntime';
 
 export async function GET() {
   const state = runtime.getState();
+  const uptime = runtime.getUptime();
+  
   return NextResponse.json({
-    status: 'MOS Core is live',
-    state: state,
+    status: 'MOS Core Operational',
+    coreState: state,
+    uptime: `${Math.floor(uptime)}s`,
     timestamp: new Date().toISOString(),
-    // Fix: Cast process to any to resolve missing version property error in TypeScript
-    node: (process as any).version
+    node: (process as any).version || 'unknown'
   });
 }

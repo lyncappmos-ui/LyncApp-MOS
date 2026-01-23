@@ -2,11 +2,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { MOSService } from '@/services/mosService';
 import { MOCK_DB } from '@/services/db';
-import { runtime } from '@/services/coreRuntime';
+import { runtime } from '@/core/coreRuntime';
 import { TripStatus } from '@/types';
 
-export async function GET() {
-  const result = await runtime.executeSafe(async () => MOCK_DB.trips, []);
+export async function GET(request: NextRequest) {
+  const result = await runtime.executeSafe(async () => {
+    return MOCK_DB.trips;
+  }, []);
   return NextResponse.json(result);
 }
 
