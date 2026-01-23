@@ -5,11 +5,12 @@ import { runtime } from '../services/coreRuntime';
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Content-Type', 'application/json');
 
   if (req.method === 'OPTIONS') return res.status(204).end();
 
   const health = await runtime.checkDependencies();
-  const response = runtime.envelope({
+  const result = runtime.envelope({
     uptime: runtime.getUptime(),
     lastHealthyAt: runtime.getLastHealthyAt(),
     dependencies: health,
@@ -19,5 +20,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   });
 
-  return res.status(200).json(response);
+  return res.status(200).json({
+    status: result.error ? 'error' : 'success',
+    data: result.data,
+    fallback: !!result.error
+  });
 }
