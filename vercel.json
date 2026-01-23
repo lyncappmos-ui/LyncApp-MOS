@@ -1,34 +1,6 @@
 
 {
   "version": 2,
-  "functions": {
-    "src/api/**/*.ts": {
-      "runtime": "@vercel/node@3.18.0",
-      "memory": 1024,
-      "maxDuration": 15
-    }
-  },
-  "rewrites": [
-    {
-      "source": "/api/test",
-      "destination": "/src/api/test"
-    },
-    {
-      "source": "/api/:path*",
-      "destination": "/src/api/:path*"
-    },
-    {
-      "source": "/health",
-      "destination": "/src/api/health"
-    },
-    {
-      "source": "/core/:path*",
-      "destination": "/src/api/state"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
-  ],
-  "trailingSlash": false
+  "framework": "nextjs",
+  "cleanUrls": true
 }

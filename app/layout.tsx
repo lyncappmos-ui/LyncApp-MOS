@@ -1,8 +1,8 @@
+
 import React from "react";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import '../services/MOSAPI'; // Initialize MOS Bridge Relay
 
 const inter = Inter({ 
   subsets: ["latin"],
@@ -14,15 +14,14 @@ export const metadata: Metadata = {
   description: "A production-grade Mobility Operating System for Matatu SACCOs",
 };
 
-// Fix: Added React import to resolve 'Cannot find namespace React' for React.ReactNode on line 19
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${inter.variable} font-sans antialiased bg-[#020617] text-slate-400`}>
+    <html lang="en" className="dark">
+      <body className={`${inter.variable} font-sans antialiased bg-[#020617] text-slate-400 selection:bg-blue-500/30`}>
         {children}
       </body>
     </html>

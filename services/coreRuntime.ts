@@ -1,18 +1,16 @@
-
 import { CoreState, CoreResponse, CoreError } from '../types';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 import { bus } from './eventBus';
 
 /**
- * PHASE 3: Circuit Breaker & Offline Fallback implementation.
- * Manages system health and prevents cascading failures.
+ * MOS Core Runtime
+ * High-Integrity execution with circuit breaking and offline fallbacks.
  */
 class CoreRuntime {
   private state: CoreState = CoreState.BOOTING;
-  private version = '1.2.0-serverless';
+  private version = '2.4.0-nextjs';
   private lastHealthyAt: string = new Date().toISOString();
   
-  // Circuit Breaker State
   private failureCount = 0;
   private maxFailures = 3;
   private isCircuitBroken = false;
@@ -45,11 +43,10 @@ class CoreRuntime {
 
     try {
       if (isSupabaseConfigured && supabase) {
-        // Ping Supabase to verify connectivity
         const { error } = await supabase.from('saccos').select('count', { count: 'exact', head: true });
         health.db = !error;
       } else {
-        health.db = true; // Local dev mode fallback
+        health.db = true; 
       }
     } catch (e) {
       health.db = false;
@@ -66,9 +63,6 @@ class CoreRuntime {
     return health;
   }
 
-  /**
-   * executeSafe: High-integrity execution wrapper.
-   */
   public async executeSafe<T>(
     operation: () => Promise<T>,
     fallbackData: T,
@@ -78,14 +72,14 @@ class CoreRuntime {
     if (this.isCircuitBroken) {
       return this.envelope(fallbackData, {
         code: 'CIRCUIT_BREAKER_OPEN',
-        message: 'System is currently protecting itself. Using offline fallback data.'
+        message: 'System is protecting itself. Using offline fallback.'
       });
     }
 
     if (options.isWrite && (this.state === CoreState.READ_ONLY || this.state === CoreState.DEGRADED)) {
       return this.envelope(fallbackData, {
         code: 'CORE_PROTECTION_FAULT',
-        message: `Writes disabled. System is currently in ${this.state} state.`
+        message: `Writes disabled. System is in ${this.state} state.`
       });
     }
 
@@ -100,7 +94,7 @@ class CoreRuntime {
 
       return this.envelope(fallbackData, {
         code: err.code || 'RUNTIME_EXCEPTION',
-        message: err.message || 'An unexpected MOS Core error occurred. Using fallback.'
+        message: err.message || 'MOS Core error. Using fallback.'
       });
     }
   }
@@ -127,9 +121,7 @@ class CoreRuntime {
   }
 
   private tripCircuit() {
-    console.warn("[MOS_RUNTIME] CIRCUIT BREAKER TRIPPED!");
     this.isCircuitBroken = true;
-    
     if (this.resetTimeout) clearTimeout(this.resetTimeout);
     this.resetTimeout = setTimeout(() => {
       this.resetCircuit();
@@ -137,15 +129,13 @@ class CoreRuntime {
   }
 
   public resetCircuit() {
-    if (this.isCircuitBroken) {
-      this.isCircuitBroken = false;
-      this.failureCount = 0;
-    }
+    this.isCircuitBroken = false;
+    this.failureCount = 0;
   }
 
   public getUptime(): number {
-    // Fix: Cast process to any to resolve Property 'uptime' does not exist on type 'Process'
-    return (process as any).uptime();
+    // Fix: Cast process to any to avoid missing uptime property error in some environments
+    return typeof process !== 'undefined' ? (process as any).uptime() : 0;
   }
 
   public getLastHealthyAt(): string {
