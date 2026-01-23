@@ -1,9 +1,9 @@
 
 {
-  "version": 2,
+  "version": 3,
   "functions": {
     "src/index.ts": {
-      "runtime": "nodejs24.x",
+      "runtime": "@vercel/node@3.18.0",
       "memory": 1024,
       "maxDuration": 15
     }
