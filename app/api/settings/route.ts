@@ -8,9 +8,5 @@ export async function GET() {
     return MOCK_DB.saccos[0] || null;
   }, null);
 
-  return NextResponse.json({
-    status: result.error ? 'error' : 'success',
-    data: result.data,
-    fallback: !!result.error
-  });
+  return NextResponse.json(result);
 }

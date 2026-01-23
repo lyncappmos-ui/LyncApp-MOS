@@ -8,13 +8,5 @@ export async function GET() {
     return MOCK_DB.branches;
   }, []);
 
-  return NextResponse.json({
-    status: result.error ? 'error' : 'success',
-    data: result.data,
-    fallback: !!result.error,
-    meta: {
-      timestamp: result.timestamp,
-      coreState: result.coreState
-    }
-  });
+  return NextResponse.json(result);
 }

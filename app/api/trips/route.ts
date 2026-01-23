@@ -7,11 +7,7 @@ import { TripStatus } from '@/types';
 
 export async function GET() {
   const result = await runtime.executeSafe(async () => MOCK_DB.trips, []);
-  return NextResponse.json({
-    status: result.error ? 'error' : 'success',
-    data: result.data,
-    fallback: !!result.error
-  });
+  return NextResponse.json(result);
 }
 
 export async function POST(request: NextRequest) {
@@ -25,12 +21,7 @@ export async function POST(request: NextRequest) {
       throw new Error("INVALID_ACTION");
     }, null as any, { isWrite: true });
 
-    return NextResponse.json({
-      status: result.error ? 'error' : 'success',
-      data: result.data,
-      fallback: !!result.error,
-      error: result.error
-    });
+    return NextResponse.json(result);
   } catch (err: any) {
     return NextResponse.json({
       status: 'error',

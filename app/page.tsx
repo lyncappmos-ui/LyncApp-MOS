@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Terminal, Cpu, Activity, ShieldCheck, Radio, Lock, SignalHigh, Globe, Key, AlertCircle, RefreshCcw } from 'lucide-react';
+import { Terminal, Cpu, Activity, ShieldCheck, Radio, SignalHigh, Globe, Key, RefreshCcw, BookOpen, Layers } from 'lucide-react';
 import { bus, MOSEvents } from '@/services/eventBus';
 import { LyncMOS } from '@/services/MOSAPI';
 import { MOCK_DB } from '@/services/db';
@@ -21,11 +21,11 @@ export default function Home() {
   };
 
   useEffect(() => {
-    addLog(`MOS Core Status: ${runtime.getState()}`, "info");
+    addLog(`MOS Core Initialize: Next.js App Router Runtime`, "info");
     
     const statusInterval = setInterval(() => {
       setCoreState(runtime.getState());
-    }, 1000);
+    }, 2000);
 
     bus.on(MOSEvents.TRIP_STARTED, (t) => addLog(`EVENT: [TRIP_STARTED] - Trip ${t.id}`, "event"));
     bus.on(MOSEvents.TICKET_ISSUED, (t) => addLog(`REVENUE: [TICKET_ISSUED] - KES ${t.amount}`, "api"));
@@ -65,8 +65,18 @@ export default function Home() {
   const stateColor = coreState === CoreState.READY ? 'text-green-400' : 
                     coreState === CoreState.WARMING ? 'text-yellow-400' : 'text-red-400';
 
+  const endpoints = [
+    { path: '/api/health', method: 'GET', desc: 'System pulse & runtime status' },
+    { path: '/api/branches', method: 'GET', desc: 'Sacco branch definitions' },
+    { path: '/api/crew', method: 'GET', desc: 'Operator reputation registry' },
+    { path: '/api/fleet', method: 'GET', desc: 'Vehicle asset tracking' },
+    { path: '/api/trips', method: 'GET/POST', desc: 'Operational trip commands' },
+    { path: '/api/sms', method: 'GET', desc: 'Communication delivery metrics' },
+    { path: '/api/settings', method: 'GET', desc: 'Core Sacco configuration' },
+  ];
+
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
+    <div className="h-screen flex flex-col overflow-hidden bg-[#020617]">
       <header className="bg-slate-900/80 backdrop-blur-md border-b border-slate-800 p-5 flex items-center justify-between z-30">
         <div className="flex items-center space-x-8">
           <div className="flex items-center space-x-3">
@@ -75,53 +85,48 @@ export default function Home() {
               <h1 className="text-white font-black text-sm tracking-tighter uppercase leading-none">MOS-CORE-V2</h1>
               <div className="flex items-center space-x-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-1">
                 <Radio size={10} className={`${stateColor} animate-pulse`} />
-                <span>Core State: {coreState}</span>
+                <span>State: {coreState}</span>
               </div>
             </div>
           </div>
-          <div className="hidden md:flex space-x-3">
-            <StatusBadge icon={Activity} label="Engine" value={coreState} color={stateColor} />
-            <StatusBadge icon={SignalHigh} label="Protocol" value="CORE_RPC_V2" color="text-blue-400" />
-            <StatusBadge icon={ShieldCheck} label="Security" value="ISOLATED" color="text-indigo-400" />
+          <div className="hidden lg:flex space-x-3">
+            <StatusBadge icon={Activity} label="Engine" value="NEXTJS_SERVERLESS" color="text-blue-400" />
+            <StatusBadge icon={SignalHigh} label="Protocol" value="CORE_RPC_V4" color="text-indigo-400" />
+            <StatusBadge icon={ShieldCheck} label="Security" value="PLATFORM_KEY" color="text-emerald-400" />
           </div>
+        </div>
+        <div className="flex items-center space-x-4">
+          <button 
+            onClick={runSimulation} 
+            className={`text-[9px] font-black uppercase px-4 py-2 rounded-xl border transition-all ${isSimulating ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-green-500/10 text-green-500 border-green-500/20'}`}
+          >
+            {isSimulating ? 'Stop Traffic' : 'Start Simulation'}
+          </button>
         </div>
       </header>
 
       <main className="flex-1 flex overflow-hidden">
-        <section className="flex-1 flex flex-col bg-[#030816] relative border-r border-slate-800">
-          <div className="p-6 flex items-center justify-between border-b border-slate-800/50 bg-slate-900/20 backdrop-blur-sm sticky top-0 z-10">
-            <div className="flex items-center space-x-3 text-slate-500">
-              <Terminal size={14} className="text-blue-500" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-white">System runtime Logs</span>
-            </div>
-            <button 
-              onClick={runSimulation} 
-              className={`text-[9px] font-black uppercase px-4 py-2 rounded-xl border transition-all ${isSimulating ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-green-500/10 text-green-500 border-green-500/20'}`}
-            >
-              {isSimulating ? 'Stop Traffic' : 'Start Simulation'}
-            </button>
-          </div>
-          <div className="flex-1 overflow-y-auto custom-scrollbar p-8 space-y-2 bg-[#01040a]">
-             {logs.map((log, i) => (
-                <div key={i} className="flex group font-mono text-[11px] py-1.5 border-l-2 border-transparent hover:border-blue-500/50 pl-4 transition-all">
-                  <span className="text-slate-800 mr-6 tabular-nums w-24">[{log.timestamp}]</span>
-                  <span className={`flex-1 ${
-                    log.type === 'security' ? 'text-amber-500 font-bold' : 
-                    log.type === 'event' ? 'text-green-500' : 
-                    log.type === 'api' ? 'text-blue-400' : 
-                    log.type === 'error' ? 'text-red-500' : 'text-slate-500'
-                  }`}>
-                    {log.msg}
-                  </span>
-                </div>
-             ))}
-          </div>
-        </section>
-
-        <aside className="hidden lg:flex w-[400px] bg-slate-900/50 flex-col border-l border-slate-800">
+        {/* Navigation / Endpoints Side */}
+        <aside className="w-[320px] bg-slate-900/30 border-r border-slate-800 flex flex-col hidden xl:flex">
           <div className="p-6 border-b border-slate-800">
-             <h3 className="text-xs font-black text-white uppercase tracking-widest flex items-center mb-6">
-                <Globe size={14} className="mr-2 text-blue-500" /> Platform Intercepts
+             <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center mb-6">
+                <BookOpen size={14} className="mr-2 text-blue-500" /> API Documentation
+             </h3>
+             <div className="space-y-2">
+                {endpoints.map((ep, i) => (
+                  <div key={i} className="group p-3 rounded-xl border border-slate-800 hover:border-slate-700 bg-slate-900/50 transition-all cursor-pointer">
+                    <div className="flex items-center justify-between mb-1">
+                      <code className="text-[11px] text-blue-400 font-bold">{ep.path}</code>
+                      <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">{ep.method}</span>
+                    </div>
+                    <p className="text-[9px] text-slate-500 leading-tight">{ep.desc}</p>
+                  </div>
+                ))}
+             </div>
+          </div>
+          <div className="p-6 flex-1 overflow-y-auto custom-scrollbar">
+             <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center mb-6">
+                <Globe size={14} className="mr-2 text-indigo-500" /> Intercepts
              </h3>
              <div className="space-y-4">
                 {gateConnections.map((conn, i) => (
@@ -134,34 +139,56 @@ export default function Home() {
                           {conn.status}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between">
-                         <div className="flex items-center text-[10px] text-slate-500 font-mono">
-                           <Key size={10} className="mr-2" /> {conn.method}
-                         </div>
+                      <div className="flex items-center text-[10px] text-slate-500 font-mono">
+                        <Key size={10} className="mr-2" /> {conn.method}
                       </div>
                     </div>
                 ))}
                 {gateConnections.length === 0 && (
-                  <div className="p-12 text-center text-slate-600 italic text-xs">
-                    No active connections
+                  <div className="p-8 text-center text-slate-600 italic text-[10px]">
+                    Waiting for platform traffic...
                   </div>
                 )}
              </div>
           </div>
-          <div className="p-6">
-            <h3 className="text-xs font-black text-white uppercase tracking-widest flex items-center mb-6">
-              <Activity size={14} className="mr-2 text-indigo-500" /> API Endpoints
-            </h3>
-            <div className="space-y-2">
-              {['health', 'branches', 'crew', 'fleet', 'vehicles', 'sms', 'settings', 'trips'].map(endpoint => (
-                <div key={endpoint} className="p-3 bg-slate-900/50 rounded-xl border border-slate-800 text-[10px] flex items-center justify-between">
-                  <code className="text-blue-400">/api/{endpoint}</code>
-                  <span className="text-green-500 font-bold uppercase">Active</span>
-                </div>
-              ))}
+        </aside>
+
+        {/* Console / Log Side */}
+        <section className="flex-1 flex flex-col bg-[#030816] relative">
+          <div className="p-6 flex items-center justify-between border-b border-slate-800/50 bg-slate-900/20 backdrop-blur-sm sticky top-0 z-10">
+            <div className="flex items-center space-x-3 text-slate-500">
+              <Terminal size={14} className="text-blue-500" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-white">MOS Runtime Console</span>
+            </div>
+            <div className="flex items-center space-x-4">
+               <div className="flex items-center space-x-2 text-[10px] text-slate-500">
+                  <Layers size={12} />
+                  <span>v{runtime.envelope(null).version}</span>
+               </div>
             </div>
           </div>
-        </aside>
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-8 space-y-1 font-mono text-[11px] bg-[#01040a]">
+             {logs.map((log, i) => (
+                <div key={i} className="flex group py-0.5 hover:bg-slate-900/30 pl-4 border-l border-slate-900 hover:border-blue-500 transition-all">
+                  <span className="text-slate-800 mr-4 tabular-nums">[{log.timestamp}]</span>
+                  <span className={`flex-1 ${
+                    log.type === 'security' ? 'text-amber-500 font-bold' : 
+                    log.type === 'event' ? 'text-green-500' : 
+                    log.type === 'api' ? 'text-blue-400' : 
+                    log.type === 'error' ? 'text-red-500' : 'text-slate-500'
+                  }`}>
+                    {log.msg}
+                  </span>
+                </div>
+             ))}
+             {logs.length === 0 && (
+               <div className="h-full flex items-center justify-center flex-col space-y-4 opacity-20">
+                  <RefreshCcw className="animate-spin text-blue-500" size={32} />
+                  <span className="uppercase tracking-widest text-[10px] font-black">Connecting to MOS Core Hub</span>
+               </div>
+             )}
+          </div>
+        </section>
       </main>
     </div>
   );

@@ -8,9 +8,5 @@ export async function GET() {
     return MOCK_DB.smsLogs;
   }, []);
 
-  return NextResponse.json({
-    status: result.error ? 'error' : 'success',
-    data: result.data,
-    fallback: !!result.error
-  });
+  return NextResponse.json(result);
 }

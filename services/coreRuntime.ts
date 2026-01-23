@@ -1,3 +1,4 @@
+
 import { CoreState, CoreResponse, CoreError } from '../types';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 import { bus } from './eventBus';
@@ -5,19 +6,24 @@ import { bus } from './eventBus';
 /**
  * MOS Core Runtime
  * High-Integrity execution with circuit breaking and offline fallbacks.
+ * Optimised for Next.js Serverless environment.
  */
 class CoreRuntime {
   private state: CoreState = CoreState.BOOTING;
-  private version = '2.4.0-nextjs';
+  private version = '2.5.0-nextjs';
   private lastHealthyAt: string = new Date().toISOString();
   
   private failureCount = 0;
   private maxFailures = 3;
   private isCircuitBroken = false;
-  private resetTimeout: any = null;
+  // Fix: Use any instead of NodeJS.Timeout to avoid namespace errors in environments where NodeJS types are not globally available
+  private resetTimeout: any | null = null;
 
   constructor() {
-    this.initialize();
+    // Only initialize once on server start
+    if (typeof window === 'undefined') {
+      this.initialize();
+    }
   }
 
   private async initialize() {
@@ -63,6 +69,9 @@ class CoreRuntime {
     return health;
   }
 
+  /**
+   * executeSafe: The crash-proof wrapper for all API calls.
+   */
   public async executeSafe<T>(
     operation: () => Promise<T>,
     fallbackData: T,
@@ -131,11 +140,15 @@ class CoreRuntime {
   public resetCircuit() {
     this.isCircuitBroken = false;
     this.failureCount = 0;
+    if (this.resetTimeout) {
+      clearTimeout(this.resetTimeout);
+      this.resetTimeout = null;
+    }
   }
 
   public getUptime(): number {
-    // Fix: Cast process to any to avoid missing uptime property error in some environments
-    return typeof process !== 'undefined' ? (process as any).uptime() : 0;
+    // Fix: Cast process to any to avoid missing uptime property error in TypeScript environments
+    return typeof process !== 'undefined' && typeof (process as any).uptime === 'function' ? (process as any).uptime() : 0;
   }
 
   public getLastHealthyAt(): string {
