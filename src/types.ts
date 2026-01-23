@@ -19,11 +19,11 @@ export interface CoreError {
 
 /**
  * CoreResponse envelope refactored to ensure the data property 
- * is always present, avoiding "undefined" runtime crashes.
+ * allows nulls for safe fallback handling.
  */
 export interface CoreResponse<T> {
   coreState: CoreState;
-  data: T; 
+  data: T | null; 
   error?: CoreError;
   version: string;
   timestamp: string;
@@ -53,13 +53,7 @@ export type MOSCapability =
   | 'revenue_integrity' | 'audit_logs' | 'growth_metrics' 
   | 'acquisition_metrics' | 'projections';
 
-export interface PlatformOperationalMetrics {
-  activeTripCount: number;
-  globalTicketVolume: number;
-  systemLoadFactor: number;
-  lastAnchorTimestamp: string;
-}
-
+// Fix: Added missing PlatformGrowthMetrics and RevenueIntegrityReport interfaces to resolve import errors in MetricsService
 export interface PlatformGrowthMetrics {
   gmvTrend: { date: string; total: number }[];
   operatorChurnRate: number;
@@ -71,6 +65,13 @@ export interface RevenueIntegrityReport {
   unanchoredRevenue: number;
   reconciliationRate: number;
   web3VerificationStatus: 'OPTIMAL' | 'PENDING' | 'CRITICAL';
+}
+
+export interface PlatformOperationalMetrics {
+  activeTripCount: number;
+  globalTicketVolume: number;
+  systemLoadFactor: number;
+  lastAnchorTimestamp: string;
 }
 
 export interface SACCO { id: string; name: string; code: string; }

@@ -9,7 +9,7 @@ import { bus } from './eventBus';
  */
 class CoreRuntime {
   private state: CoreState = CoreState.BOOTING;
-  private version = '2.3.0';
+  private version = '2.4.0';
   private lastHealthyAt: string = new Date().toISOString();
   
   private failureCount = 0;
@@ -47,7 +47,7 @@ class CoreRuntime {
         const { error } = await supabase.from('saccos').select('count', { count: 'exact', head: true });
         health.db = !error;
       } else {
-        health.db = true; // Mock mode
+        health.db = true; 
       }
     } catch (e) {
       health.db = false;
@@ -55,7 +55,7 @@ class CoreRuntime {
 
     if (Object.values(health).every(v => v)) {
       this.lastHealthyAt = new Date().toISOString();
-      if (this.state === CoreState.DEGRADED) this.state = CoreState.READY;
+      if (this.state === CoreState.DEGRADED || this.state === CoreState.WARMING) this.state = CoreState.READY;
       this.resetCircuit(); 
     } else {
       this.reportFailure();
@@ -76,7 +76,7 @@ class CoreRuntime {
     if (this.isCircuitBroken) {
       return this.envelope(fallbackData, {
         code: 'CIRCUIT_BREAKER_OPEN',
-        message: 'System is currently protecting itself. Returning fallback.'
+        message: 'System is protecting itself. Using offline fallback.'
       });
     }
 
@@ -93,12 +93,12 @@ class CoreRuntime {
       this.onSuccess();
       return this.envelope(safeResult);
     } catch (err: any) {
-      console.error(`[MOS_RUNTIME_EXCEPTION] ${err.message}`);
+      console.error(`[MOS_RUNTIME_CRITICAL] ${err.message}`);
       this.reportFailure();
 
       return this.envelope(fallbackData, {
         code: err.code || 'RUNTIME_EXCEPTION',
-        message: err.message || 'Unexpected MOS error. Falling back.'
+        message: err.message || 'MOS Core error. Using fallback.'
       });
     }
   }
