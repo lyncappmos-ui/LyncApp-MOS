@@ -1,6 +1,6 @@
 
 /**
- * LyncApp MOS Core - High Integrity Types
+ * LyncApp MOS Core - Resilient Type Definitions
  */
 
 export enum CoreState {
@@ -8,7 +8,8 @@ export enum CoreState {
   WARMING = 'WARMING',
   READY = 'READY',
   DEGRADED = 'DEGRADED',
-  READ_ONLY = 'READ_ONLY'
+  READ_ONLY = 'READ_ONLY',
+  CIRCUIT_OPEN = 'CIRCUIT_OPEN'
 }
 
 export interface CoreError {
@@ -16,9 +17,13 @@ export interface CoreError {
   message: string;
 }
 
+/**
+ * CoreResponse envelope refactored to ensure the data property 
+ * is always present, avoiding "undefined" runtime crashes.
+ */
 export interface CoreResponse<T> {
   coreState: CoreState;
-  data: T | null;
+  data: T; 
   error?: CoreError;
   version: string;
   timestamp: string;

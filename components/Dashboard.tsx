@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, Cpu, MapPin, Sparkles, Send, MessageCircle, RefreshCcw, TrendingUp } from 'lucide-react';
+import { ShieldCheck, Cpu, MapPin, Sparkles, Send, MessageCircle, RefreshCcw, TrendingUp, AlertCircle } from 'lucide-react';
 import { MOCK_DB } from '../services/db';
 import { TripStatus, CoreState } from '../types';
 import { LyncMOS } from '../services/MOSAPI';
@@ -10,30 +10,44 @@ import { GoogleGenAI } from "@google/genai";
 import { runtime } from '../services/coreRuntime';
 
 const Dashboard: React.FC = () => {
-  const [trips, setTrips] = useState(MOCK_DB.trips);
+  // Safe defaults for state to prevent rendering undefined/null properties
+  const [trips, setTrips] = useState(MOCK_DB.trips || []);
   const [anchoring, setAnchoring] = useState(false);
   const [aiQuery, setAiQuery] = useState('');
   const [aiResponse, setAiResponse] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [systemState, setSystemState] = useState<CoreState>(runtime.getState());
+  const [errorNotice, setErrorNotice] = useState<string | null>(null);
 
   useEffect(() => {
-    const itv = setInterval(() => setSystemState(runtime.getState()), 1000);
+    const itv = setInterval(() => {
+      const currentState = runtime.getState();
+      setSystemState(currentState);
+      
+      // If circuit is broken, inform the user
+      if (currentState === CoreState.CIRCUIT_OPEN) {
+        setErrorNotice("Operational Circuit Breaker triggered. Using local cache.");
+      } else {
+        setErrorNotice(null);
+      }
+    }, 1000);
     return () => clearInterval(itv);
   }, []);
 
   const stats = [
-    { label: 'Active', count: trips.filter(t => t.status === TripStatus.ACTIVE).length },
-    { label: 'Ready', count: trips.filter(t => t.status === TripStatus.READY).length },
-    { label: 'Completed', count: trips.filter(t => t.status === TripStatus.COMPLETED).length },
-    { label: 'Revenue', count: trips.reduce((acc, t) => acc + t.totalRevenue, 0) },
+    { label: 'Active', count: trips.filter(t => t?.status === TripStatus.ACTIVE).length },
+    { label: 'Ready', count: trips.filter(t => t?.status === TripStatus.READY).length },
+    { label: 'Completed', count: trips.filter(t => t?.status === TripStatus.COMPLETED).length },
+    { label: 'Revenue', count: trips.reduce((acc, t) => acc + (t?.totalRevenue || 0), 0) },
   ];
 
   const handleDispatch = async (tripId: string) => {
-    // Correct call to dispatch via standardized API
     const res = await LyncMOS.dispatch('mos_pk_admin_global_7734', tripId);
-    if (res.data) setTrips([...MOCK_DB.trips]);
-    else if (res.error) alert(res.error.message);
+    if (res.error) {
+       setErrorNotice(res.error.message);
+    } else {
+       setTrips([...(MOCK_DB.trips || [])]);
+    }
   };
 
   const handleAskAi = async () => {
@@ -41,15 +55,16 @@ const Dashboard: React.FC = () => {
     setAiLoading(true);
     setAiResponse(null);
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+      // Corrected: Initializing GoogleGenAI using strictly process.env.API_KEY as per guidelines
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const context = `System State: ${systemState}. Trips: ${trips.length}. Total Revenue: ${stats[3].count}.`;
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
         contents: `As the LyncApp MOS Intelligence engine. Context: ${context}. User: ${aiQuery}. Help them manage Matatu operations.`,
       });
-      setAiResponse(response.text || "Analyzed.");
+      setAiResponse(response.text || "No insights found.");
     } catch (error) {
-      setAiResponse("AI Engine degraded.");
+      setAiResponse("AI Insights unavailable (Core connectivity check required).");
     } finally {
       setAiLoading(false);
     }
@@ -57,13 +72,23 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-8 p-8 max-w-7xl mx-auto animate-in fade-in duration-700">
+      {/* Resilient Error Notification Bar */}
+      {errorNotice && (
+        <div className="bg-amber-50 border border-amber-200 p-4 rounded-2xl flex items-center space-x-3 text-amber-800 animate-in slide-in-from-top-4">
+          <AlertCircle size={20} className="shrink-0" />
+          <p className="text-sm font-medium">{errorNotice}</p>
+        </div>
+      )}
+
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase italic flex items-center">
             MOS Dashboard
             {systemState !== CoreState.READY && (
-              <span className="ml-4 px-3 py-1 bg-red-100 text-red-600 text-[10px] font-black rounded-full uppercase tracking-widest animate-pulse">
-                System {systemState}
+              <span className={`ml-4 px-3 py-1 text-[10px] font-black rounded-full uppercase tracking-widest animate-pulse ${
+                systemState === CoreState.CIRCUIT_OPEN ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'
+              }`}>
+                {systemState}
               </span>
             )}
           </h1>
@@ -100,24 +125,27 @@ const Dashboard: React.FC = () => {
                 </h3>
              </div>
              <div className="divide-y divide-slate-50">
-               {trips.filter(t => t.status !== TripStatus.COMPLETED).map(trip => (
-                 <div key={trip.id} className="p-6 hover:bg-slate-50/50 transition-colors flex items-center justify-between">
+               {trips.filter(t => t?.status !== TripStatus.COMPLETED).map(trip => (
+                 <div key={trip?.id || Math.random()} className="p-6 hover:bg-slate-50/50 transition-colors flex items-center justify-between">
                    <div className="flex items-center space-x-4">
                      <div className="p-3 bg-blue-50 rounded-2xl text-blue-600"><MapPin size={20} /></div>
                      <div>
-                       <p className="text-xs font-black text-slate-400">{trip.id}</p>
-                       <p className="font-bold text-slate-900">{trip.vehicleId}</p>
+                       <p className="text-xs font-black text-slate-400">{trip?.id || 'ID_PENDING'}</p>
+                       <p className="font-bold text-slate-900">{trip?.vehicleId || 'N/A'}</p>
                      </div>
                    </div>
-                   {trip.status === TripStatus.READY && (
+                   {trip?.status === TripStatus.READY && (
                      <button onClick={() => handleDispatch(trip.id)} className="text-xs font-black bg-blue-600 text-white px-4 py-2 rounded-xl">Dispatch</button>
                    )}
                    <div className="text-right">
-                     <p className="text-sm font-black text-slate-900">KSh {trip.totalRevenue}</p>
-                     <p className="text-[10px] font-bold text-blue-500 uppercase">{trip.status}</p>
+                     <p className="text-sm font-black text-slate-900">KSh {(trip?.totalRevenue || 0).toLocaleString()}</p>
+                     <p className="text-[10px] font-bold text-blue-500 uppercase">{trip?.status || 'UNKNOWN'}</p>
                    </div>
                  </div>
                ))}
+               {trips.length === 0 && (
+                 <div className="p-12 text-center text-slate-400 italic text-sm">No operational data available.</div>
+               )}
              </div>
            </div>
         </div>

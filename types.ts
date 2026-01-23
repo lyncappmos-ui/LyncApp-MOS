@@ -24,7 +24,9 @@ export enum CoreState {
   WARMING = 'WARMING',
   READY = 'READY',
   DEGRADED = 'DEGRADED',
-  READ_ONLY = 'READ_ONLY'
+  READ_ONLY = 'READ_ONLY',
+  // Added CIRCUIT_OPEN to fix missing property error in Dashboard.tsx
+  CIRCUIT_OPEN = 'CIRCUIT_OPEN'
 }
 
 export interface CoreError {
@@ -56,11 +58,7 @@ export type MOSCapability =
   | 'system_health'
   | 'operational_metrics'
   | 'trust_metrics'
-  | 'revenue_integrity'
-  | 'audit_logs'
-  | 'growth_metrics'
-  | 'acquisition_metrics'
-  | 'projections';
+  | 'revenue_integrity' | 'audit_logs' | 'growth_metrics' | 'acquisition_metrics' | 'projections';
 
 /**
  * NEW: Platform-Wide Aggregated Read Models
