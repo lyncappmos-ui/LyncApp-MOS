@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
   } catch (err: any) {
     return NextResponse.json({
       status: 'error',
-      message: err.message || 'Payload processing fault.'
+      message: err.message || 'Operational command fault.'
     }, { status: 400 });
   }
 }
