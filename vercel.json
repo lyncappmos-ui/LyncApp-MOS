@@ -1,6 +1,6 @@
 
 {
-  "version": 3,
+  "version": 2,
   "functions": {
     "src/index.ts": {
       "runtime": "@vercel/node@3.18.0",
