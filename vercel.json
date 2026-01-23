@@ -2,8 +2,8 @@
 {
   "version": 2,
   "functions": {
-    "api/**/*.ts": {
-      "runtime": "nodejs24.x",
+    "src/api/**/*.ts": {
+      "runtime": "@vercel/node@3.18.0",
       "memory": 1024,
       "maxDuration": 15
     }
@@ -11,15 +11,15 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "/api/:path*"
+      "destination": "/src/api/:path*"
     },
     {
       "source": "/health",
-      "destination": "/api/health"
+      "destination": "/src/api/health"
     },
     {
       "source": "/core/:path*",
-      "destination": "/api/state"
+      "destination": "/src/api/state"
     },
     {
       "source": "/(.*)",
