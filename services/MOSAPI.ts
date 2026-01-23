@@ -18,25 +18,42 @@ export const LyncMOS = {
 
   async getPlatformMetrics(key: string) {
     // Wrapped in executeSafe to provide CoreResponse envelope
+    // Fix: Added missing fallbackData as 2nd argument to executeSafe
     return runtime.executeSafe(async () => {
       AuthService.authorize(key, 'operational_metrics');
       return MetricsService.getPlatformOperations();
+    }, {
+      activeTripCount: 0,
+      globalTicketVolume: 0,
+      systemLoadFactor: 0,
+      lastAnchorTimestamp: new Date().toISOString()
     });
   },
 
   async getGrowthData(key: string) {
     // Wrapped in executeSafe to provide CoreResponse envelope
+    // Fix: Added missing fallbackData as 2nd argument to executeSafe
     return runtime.executeSafe(async () => {
       AuthService.authorize(key, 'growth_metrics');
       return MetricsService.getGrowthMetrics();
+    }, {
+      gmvTrend: [],
+      operatorChurnRate: 0,
+      newVehicleAcquisition: 0,
+      projectionConfidence: 0
     });
   },
 
   async getRevenueHealth(key: string) {
     // Wrapped in executeSafe to provide CoreResponse envelope
+    // Fix: Added missing fallbackData as 2nd argument to executeSafe
     return runtime.executeSafe(async () => {
       AuthService.authorize(key, 'revenue_integrity');
       return MetricsService.getRevenueIntegrity();
+    }, {
+      unanchoredRevenue: 0,
+      reconciliationRate: 0,
+      web3VerificationStatus: 'PENDING'
     });
   },
 
@@ -44,16 +61,18 @@ export const LyncMOS = {
 
   async dispatch(key: string, tripId: string) {
     // Wrapped in executeSafe with isWrite flag
+    // Fix: Reordered arguments - fallbackData must be 2nd, options 3rd
     return runtime.executeSafe(async () => {
       AuthService.authorize(key, 'operational_metrics'); 
       return await MOSCore.dispatchTrip(tripId);
-    }, { isWrite: true });
+    }, null as any, { isWrite: true });
   },
 
   // --- TERMINAL EDGES (Device Identity Based) ---
 
   async getTerminalContext(phone: string) {
     // Wrapped in executeSafe to provide CoreResponse envelope
+    // Fix: Added missing fallbackData as 2nd argument to executeSafe
     return runtime.executeSafe(async () => {
       const crew = MOCK_DB.crews.find(c => c.phone === phone);
       if (!crew) throw new Error("E401: UNAUTHORIZED_OPERATOR");
@@ -63,15 +82,16 @@ export const LyncMOS = {
       const vehicle = activeTrip ? MOCK_DB.vehicles.find(v => v.id === activeTrip.vehicleId) : null;
 
       return { operator: crew, activeTrip, route, vehicle };
-    });
+    }, { operator: null, activeTrip: null, route: null, vehicle: null } as any);
   },
 
   async ticket(tripId: string, phone: string, amount: number) {
     // Wrapped in executeSafe with isWrite flag
+    // Fix: Reordered arguments - fallbackData must be 2nd, options 3rd
     return runtime.executeSafe(async () => {
       // Validated at domain level in MOSCore
       return await MOSCore.issueTicket({ tripId, phone, amount });
-    }, { isWrite: true });
+    }, null as any, { isWrite: true });
   }
 };
 

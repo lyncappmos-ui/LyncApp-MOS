@@ -16,9 +16,10 @@ const TerminalSimulator: React.FC = () => {
     try {
       // The Spoke asks the HUB for context. It doesn't know about Supabase.
       const context = await LyncMOS.getTerminalContext("254700000004");
-      setOperator(context.operator);
-      setActiveTrip(context.activeTrip);
-      setRoute(context.route);
+      // Fix: Access data property of CoreResponse to resolve property access errors
+      setOperator(context.data.operator);
+      setActiveTrip(context.data.activeTrip);
+      setRoute(context.data.route);
       setBridgeStatus('CONNECTED');
     } catch (e) {
       console.error("Hub Sync Error", e);
