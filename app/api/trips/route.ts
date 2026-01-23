@@ -17,6 +17,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { action, tripId, status } = body;
     
+    if (!action || !tripId) {
+      return NextResponse.json({ error: 'Invalid payload: "action" and "tripId" are required.' }, { status: 400 });
+    }
+
     const result = await runtime.executeSafe(async () => {
       if (action === 'dispatch') return await MOSService.updateTripStatus(tripId, TripStatus.ACTIVE);
       if (action === 'update_status') return await MOSService.updateTripStatus(tripId, status);

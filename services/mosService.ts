@@ -1,13 +1,79 @@
 
 import { MOCK_DB } from './db';
 import { bus, MOSEvents } from './eventBus';
-import { TripStatus, Ticket, SmsStatus, SmsLog, DailyAnchor, IncentiveTransaction } from '../types';
+import { TripStatus, Ticket, SmsStatus, SmsLog, DailyAnchor, IncentiveTransaction, Branch, Vehicle, CrewMember, SACCO } from '../types';
 import { web3Adapter } from './web3Adapter';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 
 export class MOSService {
   private static isOnline = true;
   private static offlineQueue: Ticket[] = [];
+
+  // --- Seed / Database Service Functions ---
+
+  /**
+   * Adds SACCO settings to local and cloud DB.
+   */
+  static async addSaccoSettings(sacco: SACCO) {
+    MOCK_DB.saccos = [sacco];
+    if (isSupabaseConfigured && supabase) {
+      await supabase.from('saccos').upsert([sacco]);
+    }
+    return sacco;
+  }
+
+  /**
+   * Adds a branch to local and cloud DB.
+   */
+  static async addBranch(branch: Branch) {
+    MOCK_DB.branches.push(branch);
+    if (isSupabaseConfigured && supabase) {
+      await supabase.from('branches').insert([{
+        id: branch.id,
+        sacco_id: branch.saccoId,
+        name: branch.name,
+        location: branch.location
+      }]);
+    }
+    return branch;
+  }
+
+  /**
+   * Adds a crew member to local and cloud DB.
+   */
+  static async addCrew(crew: CrewMember) {
+    MOCK_DB.crews.push(crew);
+    if (isSupabaseConfigured && supabase) {
+      await supabase.from('crews').insert([{
+        id: crew.id,
+        name: crew.name,
+        role: crew.role,
+        phone: crew.phone,
+        trust_score: crew.trustScore,
+        incentive_balance: crew.incentiveBalance
+      }]);
+    }
+    return crew;
+  }
+
+  /**
+   * Adds a vehicle to local and cloud DB.
+   */
+  static async addVehicle(vehicle: Vehicle) {
+    MOCK_DB.vehicles.push(vehicle);
+    if (isSupabaseConfigured && supabase) {
+      await supabase.from('vehicles').insert([{
+        id: vehicle.id,
+        plate: vehicle.plate,
+        sacco_id: vehicle.saccoId,
+        branch_id: vehicle.branchId,
+        capacity: vehicle.capacity,
+        type: vehicle.type,
+        last_location: vehicle.lastLocation
+      }]);
+    }
+    return vehicle;
+  }
 
   /**
    * Pushes all local MOCK_DB data to Supabase to initialize the cloud instance.

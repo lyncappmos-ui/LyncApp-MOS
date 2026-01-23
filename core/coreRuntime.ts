@@ -1,6 +1,9 @@
+
 import { CoreState, CoreResponse, CoreError } from '@/types';
 import { supabase, isSupabaseConfigured } from '@/services/supabaseClient';
 import { bus } from '@/services/eventBus';
+import { MOCK_DB } from '@/services/db';
+import { MOSService } from '@/services/mosService';
 
 /**
  * MOS Core Runtime
@@ -9,17 +12,15 @@ import { bus } from '@/services/eventBus';
  */
 class CoreRuntime {
   private state: CoreState = CoreState.BOOTING;
-  private version = '2.8.0-core';
+  private version = '2.9.0-core';
   private lastHealthyAt: string = new Date().toISOString();
   
   private failureCount = 0;
   private maxFailures = 3;
   private isCircuitBroken = false;
-  // Fix: Use any instead of NodeJS.Timeout to avoid namespace errors in environments where NodeJS types are not globally available
   private resetTimeout: any | null = null;
 
   constructor() {
-    // Execution context check: only initialize on server-side entry
     if (typeof window === 'undefined') {
       this.initialize();
     }
@@ -51,7 +52,7 @@ class CoreRuntime {
         const { error } = await supabase.from('saccos').select('count', { count: 'exact', head: true });
         health.db = !error;
       } else {
-        health.db = true; // Local dev mode assumes healthy fallback
+        health.db = true;
       }
     } catch (e) {
       health.db = false;
@@ -70,10 +71,6 @@ class CoreRuntime {
     return health;
   }
 
-  /**
-   * executeSafe: High-integrity execution wrapper for Route Handlers.
-   * Ensures every API call returns a valid envelope and respects the circuit breaker.
-   */
   public async executeSafe<T>(
     operation: () => Promise<T>,
     fallbackData: T,
@@ -108,6 +105,39 @@ class CoreRuntime {
         message: err.message || 'Operational runtime error.'
       });
     }
+  }
+
+  // --- Entity Creation Methods (Business Logic Layer) ---
+
+  public async createBranch(data: any) {
+    return await MOSService.addBranch({
+      id: `b${MOCK_DB.branches.length + 1}`,
+      saccoId: 's1',
+      name: data.name,
+      location: data.location || 'Unknown'
+    });
+  }
+
+  public async createVehicle(data: any) {
+    return await MOSService.addVehicle({
+      id: `v${MOCK_DB.vehicles.length + 1}`,
+      plate: data.plateNumber || data.plate,
+      saccoId: 's1',
+      branchId: data.branchId || 'b1',
+      capacity: data.capacity || 14,
+      type: data.type || 'Matatu'
+    });
+  }
+
+  public async createOperator(data: any) {
+    return await MOSService.addCrew({
+      id: `c${MOCK_DB.crews.length + 1}`,
+      name: data.name,
+      role: data.role || 'DRIVER',
+      phone: data.phone || '254000000000',
+      trustScore: 100,
+      incentiveBalance: 0
+    });
   }
 
   public envelope<T>(data: T, error?: CoreError): CoreResponse<T> {
