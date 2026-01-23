@@ -7,7 +7,7 @@ import { MOSService } from '@/services/mosService';
 
 class CoreRuntime {
   private state: CoreState = CoreState.BOOTING;
-  private version = '3.1.0-kernel';
+  private version = '3.5.0-canonical';
   private lastHealthyAt: string = new Date().toISOString();
   
   private failureCount = 0;
@@ -28,6 +28,7 @@ class CoreRuntime {
       this.state = CoreState.READY;
     } catch (e) {
       this.state = CoreState.DEGRADED;
+      console.warn("[MOS_CORE] Runtime entered DEGRADED state on init.");
     }
   }
 
@@ -91,6 +92,7 @@ class CoreRuntime {
       this.onSuccess();
       return this.envelope(safeResult);
     } catch (err: any) {
+      console.error(`[MOS_RUNTIME_CRITICAL] ${err.message}`);
       this.reportFailure();
       return this.envelope(fallbackData, {
         code: err.code || 'RUNTIME_FAULT',

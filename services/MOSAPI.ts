@@ -177,8 +177,7 @@ if (typeof window !== 'undefined') {
   });
 
   // PRODUCTION EVENT BROADCAST
-  bus.on('*', (data: any, eventName?: string) => {
-    if(!eventName) return
+  bus.on('*', (data: any, eventName: string) => {
     const packet = { 
       protocol: 'LYNC_RPC_V1',
       type: 'EVENT',

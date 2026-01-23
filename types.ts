@@ -32,7 +32,7 @@ export interface CoreError {
 
 export interface CoreResponse<T> {
   coreState: CoreState;
-  data: T | null;
+  data: T | null; 
   error?: CoreError;
   version: string;
   timestamp: string;
@@ -77,7 +77,7 @@ export interface RevenueIntegrityReport {
 export interface SACCO { id: string; name: string; code: string; }
 export interface Branch { id: string; saccoId: string; name: string; location: string; }
 export interface Vehicle { id: string; plate: string; saccoId: string; branchId: string; capacity: number; type: string; lastLocation?: string; }
-export interface CrewMember { id: string; name: string; role: 'DRIVER' | 'CONDUCTOR'; phone: string; trustScore: number; incentiveBalance: number; }
+export interface CrewMember { id: string; name: string; role: 'DRIVER' | 'CONDUCTOR' | 'N/A'; phone: string; trustScore: number; incentiveBalance: number; }
 export interface Route { id: string; name: string; code: string; origin: string; destination: string; baseFare: number; segments: string[]; }
 export interface Trip { id: string; routeId: string; vehicleId: string; driverId: string; conductorId: string; branchId: string; status: TripStatus; scheduledTime: string; actualStartTime?: string; actualEndTime?: string; totalRevenue: number; ticketCount: number; }
 export interface Ticket { id: string; tripId: string; passengerPhone: string; amount: number; timestamp: string; synced: boolean; }

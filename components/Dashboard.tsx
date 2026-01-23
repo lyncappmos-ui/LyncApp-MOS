@@ -7,12 +7,10 @@ import { MOCK_DB } from '../services/db';
 import { TripStatus, CoreState } from '../types';
 import { LyncMOS } from '../services/MOSAPI';
 import { GoogleGenAI } from "@google/genai";
-import { runtime } from '../services/coreRuntime';
+import { runtime } from '../core/coreRuntime';
 
 const Dashboard: React.FC = () => {
-  // Safe defaults for state to prevent rendering undefined/null properties
   const [trips, setTrips] = useState(MOCK_DB.trips || []);
-  const [anchoring, setAnchoring] = useState(false);
   const [aiQuery, setAiQuery] = useState('');
   const [aiResponse, setAiResponse] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
@@ -23,14 +21,12 @@ const Dashboard: React.FC = () => {
     const itv = setInterval(() => {
       const currentState = runtime.getState();
       setSystemState(currentState);
-      
-      // If circuit is broken, inform the user
       if (currentState === CoreState.CIRCUIT_OPEN) {
         setErrorNotice("Operational Circuit Breaker triggered. Using local cache.");
       } else {
         setErrorNotice(null);
       }
-    }, 1000);
+    }, 2000);
     return () => clearInterval(itv);
   }, []);
 
@@ -55,15 +51,15 @@ const Dashboard: React.FC = () => {
     setAiLoading(true);
     setAiResponse(null);
     try {
-      // Corrected: Initializing GoogleGenAI using strictly process.env.API_KEY as per guidelines
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
       const context = `System State: ${systemState}. Trips: ${trips.length}. Total Revenue: ${stats[3].count}.`;
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
-        contents: `As the LyncApp MOS Intelligence engine. Context: ${context}. User: ${aiQuery}. Help them manage Matatu operations.`,
+        contents: [{ parts: [{ text: `As the LyncApp MOS Intelligence engine. Context: ${context}. User: ${aiQuery}. Help them manage Matatu operations.` }] }],
       });
       setAiResponse(response.text || "No insights found.");
     } catch (error) {
+      console.error(error);
       setAiResponse("AI Insights unavailable (Core connectivity check required).");
     } finally {
       setAiLoading(false);
@@ -72,7 +68,6 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-8 p-8 max-w-7xl mx-auto animate-in fade-in duration-700">
-      {/* Resilient Error Notification Bar */}
       {errorNotice && (
         <div className="bg-amber-50 border border-amber-200 p-4 rounded-2xl flex items-center space-x-3 text-amber-800 animate-in slide-in-from-top-4">
           <AlertCircle size={20} className="shrink-0" />
@@ -96,7 +91,6 @@ const Dashboard: React.FC = () => {
         </div>
         <div className="flex space-x-3">
           <button 
-            onClick={() => setAnchoring(true)}
             className="flex items-center space-x-2 px-6 py-3 bg-slate-900 text-white rounded-2xl font-bold hover:bg-black transition-all shadow-lg active:scale-95"
           >
             <ShieldCheck size={18} className="text-blue-400" />

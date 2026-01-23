@@ -2,6 +2,8 @@
 import { NextResponse } from 'next/server';
 import { runtime } from '@/core/coreRuntime';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   const health = await runtime.checkDependencies();
   const result = runtime.envelope({
