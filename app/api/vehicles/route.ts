@@ -13,12 +13,14 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    if (!body || (!body.plateNumber && !body.plate)) {
-      return NextResponse.json({ error: 'Payload missing "plate"' }, { status: 400 });
+    if (!body || (!body.plate && !body.plateNumber)) {
+      return NextResponse.json({ error: 'Payload missing required field "plate"' }, { status: 400 });
     }
+
     const result = await runtime.executeSafe(async () => {
       return await runtime.createVehicle(body);
     }, null as any, { isWrite: true });
+
     return NextResponse.json(result, { status: 201 });
   } catch (err) {
     return NextResponse.json({ error: 'Invalid JSON payload' }, { status: 400 });
