@@ -48,7 +48,11 @@ export type MOSCapability =
   | 'system_health'
   | 'operational_metrics'
   | 'trust_metrics'
-  | 'revenue_integrity' | 'audit_logs' | 'growth_metrics' | 'acquisition_metrics' | 'projections';
+  | 'revenue_integrity' 
+  | 'audit_logs' 
+  | 'growth_metrics' 
+  | 'acquisition_metrics' 
+  | 'projections';
 
 export interface PlatformOperationalMetrics {
   activeTripCount: number;
