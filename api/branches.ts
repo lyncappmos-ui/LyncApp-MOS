@@ -10,7 +10,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') return res.status(204).end();
 
   const result = await runtime.executeSafe(async () => {
-    return MOCK_DB.vehicles;
+    return MOCK_DB.branches;
   }, []);
 
   return res.status(200).json(result);

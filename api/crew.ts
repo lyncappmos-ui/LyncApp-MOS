@@ -1,7 +1,7 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { MOCK_DB } from '../services/db';
-import { runtime } from '../services/coreRuntime';
+import { MOCK_DB } from '../src/services/db';
+import { runtime } from '../src/services/coreRuntime';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -9,6 +9,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (req.method === 'OPTIONS') return res.status(204).end();
 
-  const result = await runtime.executeSafe(async () => MOCK_DB.crews, []);
+  const result = await runtime.executeSafe(async () => {
+    return MOCK_DB.crews;
+  }, []);
+
   return res.status(200).json(result);
 }
