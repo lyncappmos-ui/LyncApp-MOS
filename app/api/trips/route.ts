@@ -5,7 +5,7 @@ import { MOCK_DB } from '@/services/db';
 import { runtime } from '@/core/coreRuntime';
 import { TripStatus } from '@/types';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   const result = await runtime.executeSafe(async () => {
     return MOCK_DB.trips;
   }, []);

@@ -1,0 +1,18 @@
+
+import { NextResponse } from 'next/server';
+import { runtime } from '@/core/coreRuntime';
+
+export async function GET() {
+  const health = await runtime.checkDependencies();
+  const result = runtime.envelope({
+    uptime: runtime.getUptime(),
+    lastHealthyAt: runtime.getLastHealthyAt(),
+    dependencies: health,
+    config: {
+      isSupabaseConnected: !!process.env.SUPABASE_URL,
+      nodeVersion: (process as any).version
+    }
+  });
+
+  return NextResponse.json(result);
+}

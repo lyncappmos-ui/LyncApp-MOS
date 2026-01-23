@@ -6,11 +6,11 @@ import { bus } from '@/services/eventBus';
 /**
  * MOS Core Runtime
  * High-Integrity execution with circuit breaking and offline fallbacks.
- * Optimised for Next.js 15 Server-Side Environment.
+ * Validated for Node.js 24.x environment.
  */
 class CoreRuntime {
   private state: CoreState = CoreState.BOOTING;
-  private version = '2.6.0-next';
+  private version = '2.6.5-next';
   private lastHealthyAt: string = new Date().toISOString();
   
   private failureCount = 0;
@@ -19,7 +19,6 @@ class CoreRuntime {
   private resetTimeout: any = null;
 
   constructor() {
-    // Only initialize once on server boot
     if (typeof window === 'undefined') {
       this.initialize();
     }
@@ -32,7 +31,6 @@ class CoreRuntime {
       this.state = CoreState.READY;
     } catch (e) {
       this.state = CoreState.DEGRADED;
-      console.warn("[MOS_RUNTIME] Warmup failed. Operating in DEGRADED mode.");
     }
   }
 
@@ -51,7 +49,7 @@ class CoreRuntime {
         const { error } = await supabase.from('saccos').select('count', { count: 'exact', head: true });
         health.db = !error;
       } else {
-        health.db = true; // Use mock DB as healthy for local/offline modes
+        health.db = true; 
       }
     } catch (e) {
       health.db = false;
@@ -70,9 +68,6 @@ class CoreRuntime {
     return health;
   }
 
-  /**
-   * executeSafe: Crash-proof wrapper for API route handlers.
-   */
   public async executeSafe<T>(
     operation: () => Promise<T>,
     fallbackData: T,
@@ -82,7 +77,7 @@ class CoreRuntime {
     if (this.isCircuitBroken) {
       return this.envelope(fallbackData, {
         code: 'CIRCUIT_BREAKER_OPEN',
-        message: 'System is protecting itself. Using high-integrity fallback.'
+        message: 'System is protecting itself. Using offline fallback.'
       });
     }
 
@@ -135,7 +130,7 @@ class CoreRuntime {
     if (this.resetTimeout) clearTimeout(this.resetTimeout);
     this.resetTimeout = setTimeout(() => {
       this.resetCircuit();
-    }, 30000); // Wait 30s before trying to recover
+    }, 30000); 
   }
 
   public resetCircuit() {
