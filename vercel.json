@@ -1,16 +1,29 @@
 
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "src/index.ts",
-      "use": "@vercel/node"
+  "functions": {
+    "src/index.ts": {
+      "runtime": "nodejs24.x",
+      "memory": 1024,
+      "maxDuration": 10
     }
-  ],
-  "routes": [
+  },
+  "rewrites": [
     {
-      "src": "/(.*)",
-      "dest": "src/index.ts"
+      "source": "/api/:path*",
+      "destination": "src/index.ts"
+    },
+    {
+      "source": "/core/:path*",
+      "destination": "src/index.ts"
+    },
+    {
+      "source": "/health",
+      "destination": "src/index.ts"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
