@@ -10,7 +10,7 @@ import { bus } from '@/services/eventBus';
  */
 class CoreRuntime {
   private state: CoreState = CoreState.BOOTING;
-  private version = '2.6.5-next';
+  private version = '2.7.0-hub';
   private lastHealthyAt: string = new Date().toISOString();
   
   private failureCount = 0;
@@ -31,6 +31,7 @@ class CoreRuntime {
       this.state = CoreState.READY;
     } catch (e) {
       this.state = CoreState.DEGRADED;
+      console.warn("[MOS_RUNTIME] Cold boot warning: Operating in DEGRADED mode.");
     }
   }
 
@@ -77,14 +78,14 @@ class CoreRuntime {
     if (this.isCircuitBroken) {
       return this.envelope(fallbackData, {
         code: 'CIRCUIT_BREAKER_OPEN',
-        message: 'System is protecting itself. Using offline fallback.'
+        message: 'System protection mode active. Returning cached/mock data.'
       });
     }
 
     if (options.isWrite && (this.state === CoreState.READ_ONLY || this.state === CoreState.DEGRADED)) {
       return this.envelope(fallbackData, {
         code: 'CORE_PROTECTION_FAULT',
-        message: `Writes disabled. System is in ${this.state} state.`
+        message: `Writes disabled. System state is ${this.state}.`
       });
     }
 
@@ -94,12 +95,12 @@ class CoreRuntime {
       this.onSuccess();
       return this.envelope(safeResult);
     } catch (err: any) {
-      console.error(`[MOS_RUNTIME_CRITICAL] ${err.message}`);
+      console.error(`[MOS_RUNTIME_ERROR] ${err.message}`);
       this.reportFailure();
 
       return this.envelope(fallbackData, {
         code: err.code || 'RUNTIME_EXCEPTION',
-        message: err.message || 'MOS Core execution error.'
+        message: err.message || 'Operational execution fault.'
       });
     }
   }

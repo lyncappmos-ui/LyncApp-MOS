@@ -7,10 +7,10 @@ export async function GET() {
   const uptime = runtime.getUptime();
   
   return NextResponse.json({
-    status: 'MOS Core Operational',
+    status: 'Operational',
     coreState: state,
     uptime: `${Math.floor(uptime)}s`,
     timestamp: new Date().toISOString(),
-    node: (process as any).version || 'unknown'
+    node: (process as any).version || '24.x'
   });
 }
