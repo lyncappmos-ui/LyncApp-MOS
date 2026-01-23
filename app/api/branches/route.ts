@@ -6,25 +6,18 @@ import { runtime } from '@/core/coreRuntime';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  const result = await runtime.executeSafe(async () => {
-    return MOCK_DB.branches || [];
-  }, []);
-  return NextResponse.json(result);
+  const response = await runtime.executeSafe(async () => MOCK_DB.branches, []);
+  return NextResponse.json(response);
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    const body = await request.json();
-    if (!body || !body.name) {
-      return NextResponse.json({ error: 'Payload missing required field "name"' }, { status: 400 });
-    }
-
+    const body = await req.json();
     const result = await runtime.executeSafe(async () => {
       return await runtime.createBranch(body);
-    }, null as any, { isWrite: true });
-
-    return NextResponse.json(result, { status: 201 });
+    }, null, { isWrite: true });
+    return NextResponse.json(result);
   } catch (err) {
-    return NextResponse.json({ error: 'Invalid JSON payload' }, { status: 400 });
+    return NextResponse.json({ error: 'BAD_REQUEST' }, { status: 400 });
   }
 }

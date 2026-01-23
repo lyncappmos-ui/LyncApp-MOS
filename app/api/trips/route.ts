@@ -1,36 +1,28 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { MOSService } from '@/services/mosService';
 import { MOCK_DB } from '@/services/db';
 import { runtime } from '@/core/coreRuntime';
-import { TripStatus } from '@/types';
+import { LyncMOS } from '@/services/MOSAPI';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  const result = await runtime.executeSafe(async () => {
-    return MOCK_DB.trips || [];
-  }, []);
-  return NextResponse.json(result);
+  const response = await runtime.executeSafe(async () => MOCK_DB.trips, []);
+  return NextResponse.json(response);
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    const body = await request.json();
-    const { action, tripId, status } = body;
+    const body = await req.json();
+    const { action, tripId, key } = body;
     
-    if (!action || !tripId) {
-      return NextResponse.json({ error: 'Missing "action" or "tripId"' }, { status: 400 });
-    }
-
     const result = await runtime.executeSafe(async () => {
-      if (action === 'dispatch') return await MOSService.updateTripStatus(tripId, TripStatus.ACTIVE);
-      if (action === 'update_status') return await MOSService.updateTripStatus(tripId, status);
+      if (action === 'dispatch') return await LyncMOS.dispatch(key || 'mos_pk_admin_global_7734', tripId);
       throw new Error("UNSUPPORTED_ACTION");
-    }, null as any, { isWrite: true });
+    }, null, { isWrite: true });
 
     return NextResponse.json(result);
   } catch (err) {
-    return NextResponse.json({ error: 'Operation failed' }, { status: 400 });
+    return NextResponse.json({ error: 'BAD_REQUEST' }, { status: 400 });
   }
 }

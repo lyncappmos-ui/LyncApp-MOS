@@ -1,19 +1,11 @@
 
-import { NextResponse } from 'next/server';
-import { runtime } from '@/core/coreRuntime';
+import { NextRequest, NextResponse } from 'next/server';
+import { LyncMOS } from '@/services/MOSAPI';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
-  const health = await runtime.checkDependencies();
-  const result = runtime.envelope({
-    uptime: runtime.getUptime(),
-    lastHealthyAt: runtime.getLastHealthyAt(),
-    dependencies: health,
-    config: {
-      isSupabaseConnected: !!process.env.SUPABASE_URL,
-      nodeVersion: (process as any).version || '24.x'
-    }
-  });
-  return NextResponse.json(result);
+export async function GET(req: NextRequest) {
+  const phone = req.nextUrl.searchParams.get('phone') || "254700000004";
+  const response = await LyncMOS.getTerminalContext(phone);
+  return NextResponse.json(response);
 }

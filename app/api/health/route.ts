@@ -7,11 +7,12 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   const result = await runtime.executeSafe(async () => {
     return {
-      status: 'MOS Core Operational',
+      status: 'ok',
+      service: 'MOS_CORE',
       node: (process as any).version || '24.x',
       uptime: `${Math.floor(runtime.getUptime())}s`
     };
-  }, { status: 'BOOTING', node: 'unknown', uptime: '0s' });
+  }, { status: 'degraded', service: 'MOS_CORE', node: 'unknown', uptime: '0s' });
 
   return NextResponse.json(result);
 }
