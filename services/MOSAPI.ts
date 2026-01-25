@@ -19,7 +19,7 @@ export const fallbackState: {
   operator: { 
     id: 'unknown', 
     name: 'Unknown Operator', 
-    role: 'N/A',
+    role: 'CONDUCTOR', // Changed to match CrewMember role literal type
     phone: '0',
     trustScore: 0,
     incentiveBalance: 0

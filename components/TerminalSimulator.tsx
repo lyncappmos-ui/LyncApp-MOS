@@ -1,25 +1,41 @@
 
+"use client";
+
 import React, { useState, useEffect } from 'react';
 import { Smartphone, Ticket, ShieldCheck, Wifi, CreditCard, RefreshCw, Lock, Zap, Cloud } from 'lucide-react';
 import { bus, MOSEvents } from '../services/eventBus';
 import { LyncMOS } from '../services/MOSAPI';
+import { CrewMember, Trip, Route } from '../types';
 
 const TerminalSimulator: React.FC = () => {
-  const [operator, setOperator] = useState<any>(null);
-  const [activeTrip, setActiveTrip] = useState<any>(null);
-  const [route, setRoute] = useState<any>(null);
+  const [operator, setOperator] = useState<CrewMember | null>(null);
+  const [activeTrip, setActiveTrip] = useState<Trip | null>(null);
+  const [route, setRoute] = useState<Route | null>(null);
   const [loading, setLoading] = useState(true);
   const [ticketStatus, setTicketStatus] = useState<'idle' | 'success'>('idle');
-  const [bridgeStatus, setBridgeStatus] = useState<'CONNECTING' | 'CONNECTED'>('CONNECTING');
+  const [bridgeStatus, setBridgeStatus] = useState<'CONNECTING' | 'CONNECTED' | 'DISCONNECTED'>('CONNECTING');
 
   const syncWithHub = async () => {
     try {
-      // The Spoke asks the HUB for context. It doesn't know about Supabase.
-      const context = await LyncMOS.getTerminalContext("254700000004");
-      // Fix: Access data property of CoreResponse to resolve property access errors
-      setOperator(context.data.operator);
-      setActiveTrip(context.data.activeTrip);
-      setRoute(context.data.route);
+      const response = await LyncMOS.getTerminalContext("254700000004");
+
+      /**
+       * CANONICAL NARROWING: 
+       * Explicitly checking 'response.data' for nullity is the standard pattern 
+       * to satisfy strict TypeScript builds. Using destructuring after this 
+       * check ensures the local scope knows the data is non-nullable.
+       */
+      if (response.data === null) {
+        setBridgeStatus('DISCONNECTED');
+        return;
+      }
+
+      // At this point, response.data is narrowed to the generic T (not T | null)
+      const terminalData = response.data;
+
+      setOperator(terminalData.operator);
+      setActiveTrip(terminalData.activeTrip);
+      setRoute(terminalData.route);
       setBridgeStatus('CONNECTED');
     } catch (e) {
       console.error("Hub Sync Error", e);
@@ -32,7 +48,6 @@ const TerminalSimulator: React.FC = () => {
   useEffect(() => {
     syncWithHub();
 
-    // The Hub broadcasts events when cloud state changes
     const handleRemoteSignal = () => syncWithHub();
     
     bus.on(MOSEvents.TRIP_STARTED, handleRemoteSignal);
@@ -49,7 +64,6 @@ const TerminalSimulator: React.FC = () => {
   const handleIssueTicket = async (amount: number) => {
     if (!activeTrip) return;
     try {
-      // Command sent to Hub Relay
       await LyncMOS.ticket(activeTrip.id, "2547" + Math.random().toString().slice(2,10), amount);
       setTicketStatus('success');
       setTimeout(() => setTicketStatus('idle'), 2000);
@@ -84,12 +98,12 @@ const TerminalSimulator: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center font-black text-white shadow-lg">
-              {operator?.name.charAt(0)}
+              {operator?.name?.charAt(0) || 'U'}
             </div>
             <div>
-              <h2 className="text-white font-bold text-sm">{operator?.name}</h2>
+              <h2 className="text-white font-bold text-sm">{operator?.name || 'Unknown Operator'}</h2>
               <div className="flex items-center text-[10px] text-blue-400 font-bold uppercase tracking-widest">
-                <ShieldCheck size={10} className="mr-1" /> Trust: {operator?.trustScore}%
+                <ShieldCheck size={10} className="mr-1" /> Trust: {operator?.trustScore ?? 0}%
               </div>
             </div>
           </div>
@@ -105,7 +119,7 @@ const TerminalSimulator: React.FC = () => {
                <div className="absolute top-0 right-0 p-4 opacity-10"><Smartphone size={80} /></div>
                <p className="text-[10px] font-black uppercase opacity-60 mb-1 tracking-widest">Live Assignment</p>
                <h3 className="text-xl font-black mb-4">
-                 {route?.code} • {activeTrip.vehicleId}
+                 {route?.code || 'GEN'} • {activeTrip.vehicleId}
                </h3>
                <div className="flex items-center justify-between border-t border-white/10 pt-4">
                  <div><p className="text-[9px] uppercase opacity-50">Hub Revenue</p><p className="font-black tabular-nums">KSh {activeTrip.totalRevenue}</p></div>
