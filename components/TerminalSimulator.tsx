@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Smartphone, Ticket, ShieldCheck, Wifi, CreditCard, RefreshCw, Lock, Zap, Cloud } from 'lucide-react';
 import { bus, MOSEvents } from '../services/eventBus';
 import { LyncMOS } from '../services/MOSAPI';
@@ -15,35 +15,33 @@ const TerminalSimulator: React.FC = () => {
   const [ticketStatus, setTicketStatus] = useState<'idle' | 'success'>('idle');
   const [bridgeStatus, setBridgeStatus] = useState<'CONNECTING' | 'CONNECTED' | 'DISCONNECTED'>('CONNECTING');
 
-  const syncWithHub = async () => {
+  const syncWithHub = useCallback(async () => {
     try {
       const response = await LyncMOS.getTerminalContext("254700000004");
 
       /**
-       * CANONICAL NARROWING:
-       * 1. Check for response validity.
-       * 2. Narrow data to non-null scope.
-       * 3. Assign properties safely using the refined TerminalContext structure.
+       * Type-Safe Narrowing
+       * data is never null per CoreResponse contract.
+       * Individual fields are nullable per TerminalContext contract.
        */
-      if (response.data === null) {
+      const { data } = response;
+      
+      setOperator(data.operator);
+      setActiveTrip(data.activeTrip);
+      setRoute(data.route);
+      
+      if (data.operator) {
+        setBridgeStatus('CONNECTED');
+      } else {
         setBridgeStatus('DISCONNECTED');
-        return;
       }
-
-      const terminalData = response.data;
-
-      // Type-safe assignment for nullable properties
-      setOperator(terminalData.operator);
-      setActiveTrip(terminalData.activeTrip);
-      setRoute(terminalData.route);
-      setBridgeStatus('CONNECTED');
     } catch (e) {
       console.error("Hub Sync Error", e);
       setBridgeStatus('CONNECTING');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     syncWithHub();
@@ -59,12 +57,16 @@ const TerminalSimulator: React.FC = () => {
       bus.off(MOSEvents.TRIP_COMPLETED, handleRemoteSignal);
       bus.off(MOSEvents.SYNC_REQUIRED, handleRemoteSignal);
     };
-  }, []);
+  }, [syncWithHub]);
 
   const handleIssueTicket = async (amount: number) => {
     if (!activeTrip) return;
     try {
-      await LyncMOS.ticket(activeTrip.id, "2547" + Math.random().toString().slice(2,10), amount);
+      const res = await LyncMOS.ticket(activeTrip.id, "2547" + Math.random().toString().slice(2,10), amount);
+      if (res.error) {
+        alert(res.error.message);
+        return;
+      }
       setTicketStatus('success');
       setTimeout(() => setTicketStatus('idle'), 2000);
       syncWithHub(); 
@@ -97,11 +99,11 @@ const TerminalSimulator: React.FC = () => {
         {/* Profile Card */}
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center font-black text-white shadow-lg">
-              {operator?.name?.charAt(0) || 'U'}
+            <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center font-black text-white shadow-lg uppercase">
+              {operator?.name?.charAt(0) || '?'}
             </div>
             <div>
-              <h2 className="text-white font-bold text-sm">{operator?.name || 'Unknown Operator'}</h2>
+              <h2 className="text-white font-bold text-sm">{operator?.name || 'Awaiting Session'}</h2>
               <div className="flex items-center text-[10px] text-blue-400 font-bold uppercase tracking-widest">
                 <ShieldCheck size={10} className="mr-1" /> Trust: {operator?.trustScore ?? 0}%
               </div>

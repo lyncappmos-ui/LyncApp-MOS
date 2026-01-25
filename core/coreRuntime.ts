@@ -5,13 +5,13 @@ import { bus } from '@/services/eventBus';
 
 class CoreRuntime {
   private state: CoreState = CoreState.BOOTING;
-  private version = '3.7.1-stable';
+  private version = '3.8.0-stable';
   private lastHealthyAt: string = new Date().toISOString();
   
   private failureCount = 0;
   private maxFailures = 3;
   private isCircuitBroken = false;
-  private resetTimeout: any | null = null;
+  private resetTimeout: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     if (typeof window === 'undefined') {
@@ -73,7 +73,7 @@ class CoreRuntime {
     if (this.isCircuitBroken) {
       return this.envelope(fallbackData, {
         code: 'CIRCUIT_OPEN',
-        message: 'Platform in protection mode. Using mock failover.'
+        message: 'Platform in protection mode. Using local fallback.'
       });
     }
 
@@ -86,14 +86,16 @@ class CoreRuntime {
 
     try {
       const result = await operation();
-      const safeResult = (result === null || result === undefined) ? fallbackData : result;
+      // Ensure data is never null by falling back to fallbackData
+      const safeResult = result ?? fallbackData;
       this.onSuccess();
       return this.envelope(safeResult);
-    } catch (err: any) {
+    } catch (err: unknown) {
       this.reportFailure();
+      const message = err instanceof Error ? err.message : 'Operational runtime error.';
       return this.envelope(fallbackData, {
-        code: err.code || 'RUNTIME_FAULT',
-        message: err.message || 'Operational runtime error.'
+        code: 'RUNTIME_FAULT',
+        message
       });
     }
   }

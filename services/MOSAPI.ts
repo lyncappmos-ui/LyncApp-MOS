@@ -1,5 +1,5 @@
 
-import { TerminalContext, Trip, CoreResponse, TripStatus } from '../types';
+import { TerminalContext, Trip, CoreResponse, TripStatus, Ticket, PlatformOperationalMetrics } from '../types';
 import { MOCK_DB } from './db';
 import { runtime } from '../core/coreRuntime';
 import { AuthService } from './authService';
@@ -8,8 +8,7 @@ import { MOSCore } from '../core/MOSCore';
 import { bus, MOSEvents } from './eventBus';
 
 /**
- * Production-Grade Fallback State
- * Uses nulls where data is truly optional/absent to enforce correct consumer logic.
+ * Type-safe Fallback State for Terminal Context
  */
 export const terminalFallback: TerminalContext = {
   operator: null,
@@ -20,19 +19,21 @@ export const terminalFallback: TerminalContext = {
 
 export const LyncMOS = {
   
-  async getPlatformMetrics(key: string) {
-    return runtime.executeSafe(async () => {
-      AuthService.authorize(key, 'operational_metrics');
-      return MetricsService.getPlatformOperations();
-    }, {
+  async getPlatformMetrics(key: string): Promise<CoreResponse<PlatformOperationalMetrics>> {
+    const fallback: PlatformOperationalMetrics = {
       activeTripCount: 0,
       globalTicketVolume: 0,
       systemLoadFactor: 0,
       lastAnchorTimestamp: new Date().toISOString()
-    });
+    };
+
+    return runtime.executeSafe(async () => {
+      AuthService.authorize(key, 'operational_metrics');
+      return MetricsService.getPlatformOperations();
+    }, fallback);
   },
 
-  async dispatch(key: string, tripId: string) {
+  async dispatch(key: string, tripId: string): Promise<CoreResponse<Trip>> {
     const fallback = MOCK_DB.trips.find(t => t.id === tripId) || MOCK_DB.trips[0];
     return runtime.executeSafe(async () => {
       AuthService.authorize(key, 'operational_metrics'); 
@@ -60,17 +61,19 @@ export const LyncMOS = {
     }, terminalFallback);
   },
 
-  async ticket(tripId: string, phone: string, amount: number) {
-    return runtime.executeSafe(async () => {
-      return await MOSCore.issueTicket({ tripId, phone, amount });
-    }, {
+  async ticket(tripId: string, phone: string, amount: number): Promise<CoreResponse<Ticket>> {
+    const fallback: Ticket = {
       id: '',
       tripId,
       passengerPhone: phone,
       amount,
       timestamp: new Date().toISOString(),
       synced: false
-    }, { isWrite: true });
+    };
+
+    return runtime.executeSafe(async () => {
+      return await MOSCore.issueTicket({ tripId, phone, amount });
+    }, fallback, { isWrite: true });
   }
 };
 
@@ -83,20 +86,21 @@ if (typeof window !== 'undefined') {
     if (protocol !== 'LYNC_RPC_V1') return;
 
     try {
-      const api = LyncMOS as any;
+      const api = LyncMOS as Record<string, any>;
       if (typeof api[method] !== 'function') throw new Error(`METHOD_NOT_FOUND: ${method}`);
 
-      const result = await api[method](platformKey || '', ...(payload || []));
+      const response: CoreResponse<any> = await api[method](platformKey || '', ...(payload || []));
 
       event.source?.postMessage({
         protocol: 'LYNC_RPC_V1',
         type: 'RESPONSE',
         requestId,
-        success: true,
-        data: result
+        success: !response.error,
+        data: response.data,
+        error: response.error?.message
       }, { targetOrigin: event.origin });
 
-      bus.emit(MOSEvents.HEALTH_CHECK, { consumer: platformKey || 'Edge', method, status: 'SUCCESS' });
+      bus.emit(MOSEvents.HEALTH_CHECK, { consumer: platformKey || 'Edge', method, status: response.error ? 'ERROR' : 'SUCCESS' });
     } catch (err: any) {
       event.source?.postMessage({
         protocol: 'LYNC_RPC_V1',

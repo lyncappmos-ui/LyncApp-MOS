@@ -30,9 +30,13 @@ export interface CoreError {
   message: string;
 }
 
+/**
+ * CoreResponse Contract
+ * data is guaranteed to be T. Nullable states are handled within T.
+ */
 export interface CoreResponse<T> {
   coreState: CoreState;
-  data: T | null; 
+  data: T; 
   error?: CoreError;
   version: string;
   timestamp: string;
@@ -55,8 +59,8 @@ export type MOSCapability =
   | 'projections';
 
 /**
- * Redesigned Domain Interface for Terminal Operations
- * Explicitly models the existence (or lack thereof) of operational context.
+ * Explicit Domain Model for Terminal Operations
+ * Terminals can be idle, hence nullable entities.
  */
 export interface TerminalContext {
   operator: CrewMember | null;

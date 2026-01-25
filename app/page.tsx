@@ -7,28 +7,34 @@ import { bus, MOSEvents } from '@/services/eventBus';
 import { LyncMOS } from '@/services/MOSAPI';
 import { MOCK_DB } from '@/services/db';
 import { runtime } from '@/core/coreRuntime';
-import { CoreState } from '@/types';
+import { CoreState, Trip } from '@/types';
+
+type LogEntry = {
+  timestamp: string;
+  msg: string;
+  type: 'info' | 'event' | 'error' | 'api' | 'security';
+};
 
 export default function Home() {
-  const [logs, setLogs] = useState<{timestamp: string, msg: string, type: 'info' | 'event' | 'error' | 'api' | 'security'}[]>([]);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
   const [gateConnections, setGateConnections] = useState<any[]>([]);
   const [isSimulating, setIsSimulating] = useState(false);
   const [coreState, setCoreState] = useState<CoreState>(runtime.getState());
-  const simInterval = useRef<number | null>(null);
+  const simInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const addLog = (msg: string, type: 'info' | 'event' | 'error' | 'api' | 'security' = 'info') => {
+  const addLog = (msg: string, type: LogEntry['type'] = 'info') => {
     setLogs(prev => [{ timestamp: new Date().toLocaleTimeString(), msg, type }, ...prev].slice(0, 100));
   };
 
   useEffect(() => {
-    addLog(`MOS Kernel V3.6 Stable Boot Sequence Initiated`, "info");
+    addLog(`MOS Kernel V3.8 Stable Boot Sequence Initiated`, "info");
     addLog(`System Runtime: Node 24.x / Next.js 15.1`, "info");
     
     const statusInterval = setInterval(() => {
       setCoreState(runtime.getState());
     }, 2000);
 
-    const onTripStarted = (t: any) => addLog(`SIGNAL: [TRIP_STARTED] - Fleet Trip ${t.id}`, "event");
+    const onTripStarted = (t: Trip) => addLog(`SIGNAL: [TRIP_STARTED] - Fleet Trip ${t.id}`, "event");
     const onTicketIssued = (t: any) => addLog(`LEDGER: [TICKET_ISSUED] - Revenue KES ${t.amount}`, "api");
     const onHealthCheck = (data: any) => {
       setGateConnections(prev => [data, ...prev].slice(0, 8));
@@ -57,13 +63,14 @@ export default function Home() {
     } else {
       setIsSimulating(true);
       addLog("Initiating high-throughput traffic simulation...", "info");
-      simInterval.current = window.setInterval(async () => {
+      simInterval.current = setInterval(async () => {
         const randomTrip = MOCK_DB.trips[Math.floor(Math.random() * MOCK_DB.trips.length)];
         try {
           const res = await LyncMOS.ticket(randomTrip.id, "2547" + Math.random().toString().slice(2, 10), 50);
           if (res.error) addLog(`SIM_FAULT: ${res.error.message}`, "error");
-        } catch (e: any) {
-          addLog(`RUNTIME_FAULT: ${e.message}`, "error");
+        } catch (e: unknown) {
+          const msg = e instanceof Error ? e.message : 'Unknown exception';
+          addLog(`RUNTIME_FAULT: ${msg}`, "error");
         }
       }, 4000);
     }
@@ -164,7 +171,7 @@ export default function Home() {
             <div className="flex items-center space-x-8">
                <div className="flex items-center space-x-2 text-[11px] text-slate-500 font-bold">
                   <Layers size={14} className="text-slate-700" />
-                  <span className="font-mono">V3.6.0_CANONICAL</span>
+                  <span className="font-mono">V3.8.0_CANONICAL</span>
                </div>
             </div>
           </div>
