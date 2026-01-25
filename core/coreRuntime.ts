@@ -1,13 +1,11 @@
 
-import { CoreState, CoreResponse, CoreError, TripStatus } from '@/types';
+import { CoreState, CoreResponse, CoreError } from '@/types';
 import { supabase, isSupabaseConfigured } from '@/services/supabaseClient';
 import { bus } from '@/services/eventBus';
-import { MOCK_DB } from '@/services/db';
-import { MOSService } from '@/services/mosService';
 
 class CoreRuntime {
   private state: CoreState = CoreState.BOOTING;
-  private version = '3.7.0-stable';
+  private version = '3.7.1-stable';
   private lastHealthyAt: string = new Date().toISOString();
   
   private failureCount = 0;
@@ -100,37 +98,6 @@ class CoreRuntime {
     }
   }
 
-  public async createBranch(data: any) {
-    return await MOSService.addBranch({
-      id: `b${MOCK_DB.branches.length + 1}`,
-      saccoId: 's1',
-      name: data.name,
-      location: data.location || 'Unknown'
-    });
-  }
-
-  public async createVehicle(data: any) {
-    return await MOSService.addVehicle({
-      id: `v${MOCK_DB.vehicles.length + 1}`,
-      plate: data.plateNumber || data.plate,
-      saccoId: 's1',
-      branchId: data.branchId || 'b1',
-      capacity: data.capacity || 14,
-      type: data.type || 'Matatu'
-    });
-  }
-
-  public async createOperator(data: any) {
-    return await MOSService.addCrew({
-      id: `c${MOCK_DB.crews.length + 1}`,
-      name: data.name,
-      role: data.role || 'DRIVER',
-      phone: data.phone || '254000000000',
-      trustScore: 100,
-      incentiveBalance: 0
-    });
-  }
-
   public envelope<T>(data: T, error?: CoreError): CoreResponse<T> {
     return {
       coreState: this.getState(),
@@ -170,11 +137,7 @@ class CoreRuntime {
   }
 
   public getUptime(): number {
-    return typeof process !== 'undefined' && (process as any).uptime ? (process as any).uptime() : 0;
-  }
-
-  public getLastHealthyAt(): string {
-    return this.lastHealthyAt;
+    return typeof process !== 'undefined' && typeof (process as any).uptime === 'function' ? (process as any).uptime() : 0;
   }
 }
 

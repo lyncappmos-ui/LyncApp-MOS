@@ -2,6 +2,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { MOCK_DB } from '@/services/db';
 import { runtime } from '@/core/coreRuntime';
+// Import MOSService to handle crew creation
+import { MOSService } from '@/services/mosService';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,7 +22,8 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await runtime.executeSafe(async () => {
-      return await runtime.createOperator(body);
+      // Use MOSService.addCrew instead of non-existent runtime.createOperator
+      return await MOSService.addCrew(body);
     }, null as any, { isWrite: true });
 
     return NextResponse.json(result, { status: 201 });

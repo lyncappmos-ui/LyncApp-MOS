@@ -28,18 +28,24 @@ export default function Home() {
       setCoreState(runtime.getState());
     }, 2000);
 
-    bus.on(MOSEvents.TRIP_STARTED, (t) => addLog(`SIGNAL: [TRIP_STARTED] - Fleet Trip ${t.id}`, "event"));
-    bus.on(MOSEvents.TICKET_ISSUED, (t) => addLog(`LEDGER: [TICKET_ISSUED] - Revenue KES ${t.amount}`, "api"));
-    
-    bus.on(MOSEvents.HEALTH_CHECK, (data) => {
+    const onTripStarted = (t: any) => addLog(`SIGNAL: [TRIP_STARTED] - Fleet Trip ${t.id}`, "event");
+    const onTicketIssued = (t: any) => addLog(`LEDGER: [TICKET_ISSUED] - Revenue KES ${t.amount}`, "api");
+    const onHealthCheck = (data: any) => {
       setGateConnections(prev => [data, ...prev].slice(0, 8));
       const logType = data.status === 'SUCCESS' ? 'api' : 'security';
       addLog(`GATEWAY: ${data.consumer} -> ${data.method} [${data.status}]`, logType);
-    });
+    };
+
+    bus.on(MOSEvents.TRIP_STARTED, onTripStarted);
+    bus.on(MOSEvents.TICKET_ISSUED, onTicketIssued);
+    bus.on(MOSEvents.HEALTH_CHECK, onHealthCheck);
 
     return () => { 
       if (simInterval.current) clearInterval(simInterval.current); 
       clearInterval(statusInterval);
+      bus.off(MOSEvents.TRIP_STARTED, onTripStarted);
+      bus.off(MOSEvents.TICKET_ISSUED, onTicketIssued);
+      bus.off(MOSEvents.HEALTH_CHECK, onHealthCheck);
     };
   }, []);
 
