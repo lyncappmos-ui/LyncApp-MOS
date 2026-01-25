@@ -165,7 +165,7 @@ export default function Home() {
           <div className="flex-1 overflow-y-auto custom-scrollbar p-12 space-y-3 font-mono text-[12px] leading-relaxed">
              {logs.length === 0 && (
                <div className="flex items-center space-x-2 text-slate-800 animate-pulse">
-                 <span>></span>
+                 <span>{">"}</span>
                  <span className="w-2 h-4 bg-slate-800"></span>
                </div>
              )}
