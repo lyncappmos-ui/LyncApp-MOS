@@ -1,5 +1,5 @@
 
-import { CrewMember, Trip, Route, Vehicle, CoreResponse, TripStatus, CoreState } from '../types';
+import { CrewMember, Trip, Route, Vehicle, CoreResponse, TripStatus } from '../types';
 import { MOCK_DB } from './db';
 import { runtime } from '../core/coreRuntime';
 import { AuthService } from './authService';
@@ -8,8 +8,8 @@ import { MOSCore } from '../core/MOSCore';
 import { bus, MOSEvents } from './eventBus';
 
 /**
- * Fallback object for when no real data is available.
- * Ensures Type Safety across the Platform.
+ * Fallback object for high-integrity type safety across the Platform.
+ * Ensures the platform doesn't crash on null upstream data.
  */
 export const fallbackState: {
   operator: CrewMember;
@@ -17,7 +17,6 @@ export const fallbackState: {
   route: Route | null;
   vehicle: Vehicle | null;
 } = {
-  // Fixed: Added missing properties (phone, trustScore, incentiveBalance) to satisfy CrewMember interface
   operator: { 
     id: 'unknown', 
     name: 'Unknown Operator', 
@@ -37,7 +36,7 @@ export const fallbackState: {
 export const LyncMOS = {
   
   /**
-   * Safe State Aggregator
+   * Safe State Aggregator for terminal edges.
    */
   async getState(phone: string = "254700000004"): Promise<CoreResponse<typeof fallbackState>> {
     return runtime.executeSafe(async () => {
@@ -49,10 +48,10 @@ export const LyncMOS = {
       const vehicle = activeTrip ? MOCK_DB.vehicles.find(v => v.id === activeTrip.vehicleId) : null;
 
       return {
-        operator: crew ?? fallbackState.operator,
-        activeTrip: activeTrip ?? fallbackState.activeTrip,
-        route: route ?? fallbackState.route,
-        vehicle: vehicle ?? fallbackState.vehicle,
+        operator: crew,
+        activeTrip: activeTrip ?? null,
+        route: route ?? null,
+        vehicle: vehicle ?? null,
       };
     }, fallbackState);
   },
@@ -91,7 +90,8 @@ export const LyncMOS = {
 };
 
 /**
- * RPC Gateway Relay for cross-frame platform communication
+ * RPC Gateway Relay for cross-frame platform communication.
+ * Validates origins and standardizes postMessage protocol.
  */
 if (typeof window !== 'undefined') {
   const WHITELISTED_ORIGINS = [window.location.origin];

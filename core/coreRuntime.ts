@@ -7,7 +7,7 @@ import { MOSService } from '@/services/mosService';
 
 class CoreRuntime {
   private state: CoreState = CoreState.BOOTING;
-  private version = '3.6.0-stable';
+  private version = '3.7.0-stable';
   private lastHealthyAt: string = new Date().toISOString();
   
   private failureCount = 0;
@@ -28,6 +28,7 @@ class CoreRuntime {
       this.state = CoreState.READY;
     } catch (e) {
       this.state = CoreState.DEGRADED;
+      console.warn("[MOS_CORE] Runtime entered DEGRADED state.");
     }
   }
 

@@ -7,8 +7,8 @@ export async function POST(req: NextRequest) {
     const { phone, message } = await req.json();
 
     const result = await runtime.executeSafe(async () => {
-      // Logic for SMS relay would go here
-      console.log(`[MOS_CORE_SMS] Relay to ${phone}: ${message}`);
+      // Mock SMS delivery relay
+      console.log(`[MOS_SMS_GATEWAY] Dispatching to ${phone}: ${message}`);
       return { success: true, trackingId: `SMS_${Math.random().toString(36).substring(7).toUpperCase()}` };
     }, { success: false, trackingId: 'FALLBACK' }, { isWrite: true });
 
