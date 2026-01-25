@@ -1,5 +1,5 @@
 
-import { CrewMember, Trip, Route, Vehicle, CoreResponse, TripStatus } from '../types';
+import { TerminalContext, Trip, CoreResponse, TripStatus } from '../types';
 import { MOCK_DB } from './db';
 import { runtime } from '../core/coreRuntime';
 import { AuthService } from './authService';
@@ -8,22 +8,11 @@ import { MOSCore } from '../core/MOSCore';
 import { bus, MOSEvents } from './eventBus';
 
 /**
- * Fallback object for high-integrity type safety.
+ * Production-Grade Fallback State
+ * Uses nulls where data is truly optional/absent to enforce correct consumer logic.
  */
-export const fallbackState: {
-  operator: CrewMember;
-  activeTrip: Trip | null;
-  route: Route | null;
-  vehicle: Vehicle | null;
-} = {
-  operator: { 
-    id: 'unknown', 
-    name: 'Unknown Operator', 
-    role: 'CONDUCTOR', // Changed to match CrewMember role literal type
-    phone: '0',
-    trustScore: 0,
-    incentiveBalance: 0
-  },
+export const terminalFallback: TerminalContext = {
+  operator: null,
   activeTrip: null,
   route: null,
   vehicle: null,
@@ -51,7 +40,7 @@ export const LyncMOS = {
     }, fallback, { isWrite: true });
   },
 
-  async getTerminalContext(phone: string): Promise<CoreResponse<typeof fallbackState>> {
+  async getTerminalContext(phone: string): Promise<CoreResponse<TerminalContext>> {
     return runtime.executeSafe(async () => {
       const crew = MOCK_DB.crews.find(c => c.phone === phone);
       if (!crew) throw new Error("E401: UNAUTHORIZED_OPERATOR");
@@ -60,8 +49,15 @@ export const LyncMOS = {
       const route = activeTrip ? MOCK_DB.routes.find(r => r.id === activeTrip.routeId) : null;
       const vehicle = activeTrip ? MOCK_DB.vehicles.find(v => v.id === activeTrip.vehicleId) : null;
 
-      return { operator: crew, activeTrip: activeTrip ?? null, route: route ?? null, vehicle: vehicle ?? null };
-    }, fallbackState);
+      const context: TerminalContext = { 
+        operator: crew, 
+        activeTrip: activeTrip ?? null, 
+        route: route ?? null, 
+        vehicle: vehicle ?? null 
+      };
+      
+      return context;
+    }, terminalFallback);
   },
 
   async ticket(tripId: string, phone: string, amount: number) {

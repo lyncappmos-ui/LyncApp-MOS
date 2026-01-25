@@ -54,6 +54,17 @@ export type MOSCapability =
   | 'acquisition_metrics' 
   | 'projections';
 
+/**
+ * Redesigned Domain Interface for Terminal Operations
+ * Explicitly models the existence (or lack thereof) of operational context.
+ */
+export interface TerminalContext {
+  operator: CrewMember | null;
+  activeTrip: Trip | null;
+  route: Route | null;
+  vehicle: Vehicle | null;
+}
+
 export interface PlatformOperationalMetrics {
   activeTripCount: number;
   globalTicketVolume: number;

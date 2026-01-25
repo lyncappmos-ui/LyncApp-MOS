@@ -20,19 +20,19 @@ const TerminalSimulator: React.FC = () => {
       const response = await LyncMOS.getTerminalContext("254700000004");
 
       /**
-       * CANONICAL NARROWING: 
-       * Explicitly checking 'response.data' for nullity is the standard pattern 
-       * to satisfy strict TypeScript builds. Using destructuring after this 
-       * check ensures the local scope knows the data is non-nullable.
+       * CANONICAL NARROWING:
+       * 1. Check for response validity.
+       * 2. Narrow data to non-null scope.
+       * 3. Assign properties safely using the refined TerminalContext structure.
        */
       if (response.data === null) {
         setBridgeStatus('DISCONNECTED');
         return;
       }
 
-      // At this point, response.data is narrowed to the generic T (not T | null)
       const terminalData = response.data;
 
+      // Type-safe assignment for nullable properties
       setOperator(terminalData.operator);
       setActiveTrip(terminalData.activeTrip);
       setRoute(terminalData.route);
