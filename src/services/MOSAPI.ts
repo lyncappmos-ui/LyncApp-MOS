@@ -1,7 +1,7 @@
 
 import { MOSCore } from '../core/MOSCore';
 import { MOCK_DB } from './db';
-import { TripStatus } from '../types';
+import { TripStatus, CrewMember, Trip, Route, Vehicle, TerminalContext, Ticket } from '../types';
 import { MetricsService } from './metricsService';
 import { AuthService } from './authService';
 import { runtime } from './coreRuntime';
@@ -43,12 +43,12 @@ export const LyncMOS = {
     }, {
       unanchoredRevenue: 0,
       reconciliationRate: 0,
-      web3VerificationStatus: 'CRITICAL' as any
+      web3VerificationStatus: 'CRITICAL'
     });
   },
 
   async dispatch(key: string, tripId: string) {
-    const fallback = MOCK_DB.trips.find(t => t.id === tripId) || MOCK_DB.trips[0];
+    const fallback: Trip = MOCK_DB.trips.find(t => t.id === tripId) || MOCK_DB.trips[0];
     return runtime.executeSafe(async () => {
       AuthService.authorize(key, 'operational_metrics'); 
       return await MOSCore.dispatchTrip(tripId);
@@ -56,29 +56,37 @@ export const LyncMOS = {
   },
 
   async getTerminalContext(phone: string) {
-    const fallback = { operator: null, activeTrip: null, route: null, vehicle: null };
-    return runtime.executeSafe(async () => {
+    const fallback: TerminalContext = {
+      operator: MOCK_DB.crews[0], // fallback to first crew to satisfy type
+      activeTrip: undefined,
+      route: null,
+      vehicle: null
+    };
+
+    return runtime.executeSafe<TerminalContext>(async () => {
       const crew = MOCK_DB.crews.find(c => c.phone === phone);
       if (!crew) throw new Error("E401: UNAUTHORIZED_OPERATOR");
       
       const activeTrip = MOCK_DB.trips.find(t => t.conductorId === crew.id && t.status === TripStatus.ACTIVE);
-      const route = activeTrip ? MOCK_DB.routes.find(r => r.id === activeTrip.routeId) : null;
-      const vehicle = activeTrip ? MOCK_DB.vehicles.find(v => v.id === activeTrip.vehicleId) : null;
+      const route = activeTrip ? MOCK_DB.routes.find(r => r.id === activeTrip.routeId) ?? null : null;
+      const vehicle = activeTrip ? MOCK_DB.vehicles.find(v => v.id === activeTrip.vehicleId) ?? null : null;
 
       return { operator: crew, activeTrip, route, vehicle };
     }, fallback);
   },
 
   async ticket(tripId: string, phone: string, amount: number) {
-    return runtime.executeSafe(async () => {
-      return await MOSCore.issueTicket({ tripId, phone, amount });
-    }, {
+    const fallback: Ticket = {
       id: '',
       tripId,
       passengerPhone: phone,
       amount,
       timestamp: new Date().toISOString(),
       synced: false
-    }, { isWrite: true });
+    };
+
+    return runtime.executeSafe<Ticket>(async () => {
+      return await MOSCore.issueTicket({ tripId, phone, amount });
+    }, fallback, { isWrite: true });
   }
 };
